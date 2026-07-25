@@ -20,7 +20,7 @@ app = typer.Typer(
         "\n"
         "Default paths (see 'slarti doctor' for actual):\n"
         "  docs/slarti/{likec4/*.c4, linkml/*.yaml, shacl/*.ttl, constraints.yaml}\n"
-        "Config: slarti.toml (preferred) or the tool.slarti section of pyproject.toml.\n"
+        "Config: slarti.toml (preferred) or the tool.slartiarch section of pyproject.toml.\n"
         "Typical workflow: init → doctor → check → docs, then report for details."
     ),
 )

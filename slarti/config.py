@@ -84,7 +84,7 @@ def _find_pyproject_root(start: Path) -> Path | None:
         pyproject = candidate / PYPROJECT_NAME
         if pyproject.is_file():
             raw = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-            if "paths" in raw.get("tool", {}).get("slarti", {}):
+            if "paths" in raw.get("tool", {}).get("slartiarch", {}):
                 return candidate
     return None
 
@@ -97,7 +97,7 @@ def _load_toml(root: Path, name: str, source_label: str) -> Config:
 
 def _load_pyproject(root: Path) -> Config:
     raw: dict[str, Any] = tomllib.loads((root / PYPROJECT_NAME).read_text(encoding="utf-8"))
-    paths, docs = _merge(raw["tool"]["slarti"], f"{PYPROJECT_NAME} [tool.slarti]")
+    paths, docs = _merge(raw["tool"]["slartiarch"], f"{PYPROJECT_NAME} [tool.slartiarch]")
     return Config(root=root, paths=paths, documents=docs)
 
 
@@ -113,6 +113,6 @@ def load(start: Path | None = None) -> Config:
         return _load_pyproject(root)
 
     raise ConfigError(
-        f"No {CONFIG_NAME} or [tool.slarti] section in {PYPROJECT_NAME} found. "
+        f"No {CONFIG_NAME} or [tool.slartiarch] section in {PYPROJECT_NAME} found. "
         f"Run 'slarti init' first."
     )

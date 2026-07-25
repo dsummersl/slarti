@@ -1,5 +1,5 @@
 [project]
-name = "slarti"
+name = "slartiarch"
 version = "0.1.0"
 description = "A coordination CLI for validated architecture documentation"
 readme = "README.md"
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-slarti = "slarti.cli:main"
+slartiarch = "slarti.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -81,7 +81,7 @@ ignore_names = ["doctor", "docs_command", "report_command"]
 # GENERATED: every generated slot looks unused to a caller-graph scan.
 exclude = ["slarti/domain.py"]
 
-[tool.slarti.paths]
+[tool.slartiarch.paths]
 likec4 = "docs/slarti/likec4"
 linkml = "docs/slarti/linkml"
 shacl = "docs/slarti/shacl"

@@ -40,7 +40,7 @@ def test_rel_is_relative_to_the_root(tmp_path: Path) -> None:
 def test_pyproject_toml_fallback(tmp_path: Path) -> None:
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text(
-        '[tool.slarti.paths]\nlikec4 = "src/arch"\n', encoding="utf-8"
+        '[tool.slartiarch.paths]\nlikec4 = "src/arch"\n', encoding="utf-8"
     )
     cfg = config_module.load(tmp_path)
     assert cfg.root == tmp_path
@@ -51,7 +51,7 @@ def test_pyproject_toml_fallback(tmp_path: Path) -> None:
 def test_slarti_toml_precedes_pyproject(tmp_path: Path) -> None:
     (tmp_path / "slarti.toml").write_text('[paths]\nlikec4 = "from-toml"\n', encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.slarti.paths]\nlikec4 = "from-pyproject"\n', encoding="utf-8"
+        '[tool.slartiarch.paths]\nlikec4 = "from-pyproject"\n', encoding="utf-8"
     )
     cfg = config_module.load(tmp_path)
     assert cfg.paths["likec4"] == "from-toml"

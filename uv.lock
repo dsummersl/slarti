@@ -2275,7 +2275,7 @@ wheels = [
 ]
 
 [[package]]
-name = "slarti"
+name = "slartiarch"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

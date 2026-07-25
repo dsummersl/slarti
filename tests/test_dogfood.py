@@ -20,7 +20,9 @@ needs_tools = pytest.mark.skipif(not has_tools(), reason="LikeC4 or LinkML is no
 
 
 def slarti(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["slarti", *args], cwd=ROOT, capture_output=True, text=True, check=False)
+    return subprocess.run(
+        ["slartiarch", *args], cwd=ROOT, capture_output=True, text=True, check=False
+    )
 
 
 def digest(paths: tuple[str, ...] = USER_AUTHORED) -> dict[str, str]:
