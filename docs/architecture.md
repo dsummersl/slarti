@@ -22,7 +22,86 @@ exactly those joins:
 Everything else — parsing, validating, rendering, generating — is delegated to
 LikeC4, LinkML and pyshacl as subprocesses.
 
-## 2. Constraints
+## 2. Definitions
+
+The rest of this document uses these words in a narrow sense. They are defined
+here so that a rule, a table row and a finding all mean the same thing.
+
+### 2.1 Layer
+
+A **layer** is *the kind of model a rule can be stated against*, and therefore the
+kind of tool that can decide it. Every constraint in the registry declares one, and
+the layer determines which enforcer kinds are legal for it:
+
+| Layer | Model | Answers | Decided by | Enforcer kinds |
+| --- | --- | --- | --- | --- |
+| 1 — structure | LikeC4 | Which components exist, and which may talk to which? | `likec4 validate` + the JSON export | `likec4_element`, `likec4_relation`, `likec4_absent_relation`, `ownership` |
+| 2 — schema | LinkML | What entities exist, and what shape is a single instance? | `linkml lint` / `linkml validate` | `linkml_class`, `linkml_slot` |
+| 3 — instance | SHACL, run by pyshacl | Given real data, does this cross-field or cross-entity invariant hold? | `pyshacl` over a negative fixture | `shacl_shape` |
+| none | — | Anything the three layers cannot see (runtime behaviour, code paths) | a test, or a human | `external`, or `enforced_by: none` with a reason |
+
+The layers are ordered by what they can see, not by importance. Layer 1 can say
+that the web container has no relation to the database; it cannot say that a field
+is required. Layer 2 can say a slot is required; it cannot say that a subtask's list
+matches its parent's. Layer 3 can say that; it cannot say anything about a code path
+that never ran. A rule stated at the wrong layer is not enforced — it is only
+mentioned — which is why `enforced_by: none` with a reason is a first-class answer.
+
+### 2.2 LikeC4 — the structure layer
+
+LikeC4 owns *the boxes and arrows*: elements, containment, relationships, views.
+
+- **Responsibilities.** Parse `model/arch/*.c4`; reject unknown elements, dangling
+  relations and invalid views; generate diagrams (`likec4 codegen mermaid`); expose
+  the whole model as JSON (`likec4 export json`).
+- **Not responsible for.** Anything about an instance of data. LikeC4 has no notion
+  of a field, a type or a cardinality.
+- **How `slarti` uses it.** Only the model adapters shell out to it (D5, D6). The
+  export feeds the ownership seam and every layer-1 enforcer; `likec4 codegen`
+  produces the diagrams that the document generator injects (D9).
+
+### 2.3 LinkML — the schema layer
+
+LinkML owns *the entities*: classes, slots, types, cardinality, and the generators
+that project them.
+
+- **Responsibilities.** Validate `model/schema/*.yaml`; resolve it as a `SchemaView`;
+  generate SHACL (`gen-shacl`), ER diagrams, and implementation projections
+  (`gen-pydantic`, `gen-typescript`, `gen-sqlddl`, `gen-json-schema`); convert YAML
+  fixtures to RDF (`linkml-convert`).
+- **Not responsible for.** Where an entity lives in the deployed system, and any
+  invariant that spans two instances.
+- **How `slarti` uses it.** The adapters read the `SchemaView` for the class list and
+  the owner annotation on each class; layer-2 enforcers resolve against it.
+
+### 2.4 pyshacl — the instance layer
+
+pyshacl owns *the verdict on real data*: it runs a SHACL shapes graph against a data
+graph and reports conformance.
+
+- **Responsibilities.** Given the merged shapes (`model/shapes/*.ttl`, plus anything
+  LinkML generated) and one fixture, decide conformance and name every violated
+  shape.
+- **Not responsible for.** Deciding which fixtures exist or what they prove — that is
+  the registry's job.
+- **How `slarti` uses it.** Every layer-3 rule declares one negative fixture in
+  `model/data/invalid/`. `slarti check` asserts the fixture *fails* and that the
+  violation report *names that rule's shape* (`REG-6`, `REG-7`). A shape that stops
+  firing is a finding, not a silently passing build.
+
+### 2.5 Enforcer
+
+The named thing that decides a rule: a shape IRI, a `Class.slot`, a LikeC4 relation,
+or an ownership pair. A constraint without a resolvable enforcer is a `REG-1`
+finding.
+
+### 2.6 Seam
+
+A join between two models that neither model can see: LikeC4 ↔ LinkML (ownership),
+document ↔ registry, document ↔ models. Seams are the only thing `slarti` itself
+enforces.
+
+## 3. Constraints
 
 - Python 3.11+, distributed as a `uv`-installable CLI.
 - Exactly two backends: LikeC4 and LinkML. No abstraction layer over either.
@@ -32,7 +111,7 @@ LikeC4, LinkML and pyshacl as subprocesses.
   `>=1.11,<2`, Node `>=20`, Python `>=3.11,<4`. Outside the range `slarti`
   refuses to run rather than producing possibly-wrong output.
 
-## 3. Context
+## 4. Context
 
 The people who use `slarti`, the sources they edit, and the tools it delegates to.
 
@@ -62,7 +141,7 @@ graph TB
 
 <!-- slarti:end diagram:index -->
 
-## 4. Building block view
+## 5. Building block view
 
 Inside `slarti`: the CLI gates on the environment, the runner orders the checks,
 the adapters are the only components that talk to LikeC4 and LinkML, and the
@@ -119,7 +198,7 @@ graph TB
 
 <!-- slarti:end diagram:containers -->
 
-## 5. The ownership seam
+## 6. The ownership seam
 
 Every entity in the schema names the container that owns it, and every container
 claims its entities back. Both directions are checked (`OWN-1`..`OWN-5`), because
@@ -141,7 +220,7 @@ a dangling pointer and an unclaimed target are different failures.
 
 <!-- slarti:end ownership -->
 
-## 6. Enforced rules
+## 7. Enforced rules
 
 Each rule below points at an enforcer that `slarti` resolves against the models on
 every run. If the enforcer disappears, the rule becomes a `REG-1` finding rather
@@ -163,7 +242,7 @@ than a sentence that quietly stops being true.
 
 <!-- slarti:end constraints -->
 
-## 7. Unverified invariants
+## 8. Unverified invariants
 
 Rules that are stated but not mechanically enforced. This table is the honest
 case, not a failure: each entry must say why enforcement is not possible.
@@ -178,7 +257,7 @@ case, not a failure: each entry must say why enforcement is not possible.
 
 <!-- slarti:end unverified -->
 
-## 8. Decisions
+## 9. Decisions
 
 - **ADR-0001 — Python project.** See `docs/adr/0001-python-project.md`.
 - **ADR-0002 — Findings are the interface.** See
@@ -189,7 +268,7 @@ case, not a failure: each entry must say why enforcement is not possible.
   shaped around that contract, which is why `Finding`, `Constraint` and `Enforcer`
   are modelled entities with shapes over them.
 
-## 9. Risks and technical debt
+## 10. Risks and technical debt
 
 - Upstream churn in LikeC4's JSON export or LinkML's generators would produce
   wrong findings. Mitigated by a hard version ceiling and a loud refusal to run.

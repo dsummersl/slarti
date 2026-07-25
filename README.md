@@ -21,6 +21,106 @@ hide or replace any part of either. It owns exactly the joins nobody else holds:
 Everything else — parsing, validating, rendering, generating — is delegated to
 LikeC4, LinkML and pyshacl as subprocesses, at the versions *you* pinned.
 
+## The three tools, and where they meet
+
+`slarti` delegates every piece of real work to one of three tools. Each answers a
+different kind of question, and none of them can answer another's. The table below
+is the whole division of labour; the sections after it show the seams.
+
+| Tool | Layer | Owns | Cannot say |
+|------|-------|------|------------|
+| LikeC4 | 1 — structure | Components, containment, allowed relationships, diagrams | Anything about a field or an instance |
+| LinkML | 2 — schema | Entities, slots, types, cardinality, generated projections | Where an entity is deployed; any cross-instance invariant |
+| pyshacl | 3 — instance | Conformance of real data against SHACL shapes | Anything about code that never ran |
+
+### LikeC4 — structure
+
+**Responsible for:** parsing `model/arch/*.c4`, rejecting dangling relations and
+invalid views, generating Mermaid diagrams, and exporting the whole model as JSON.
+
+**`slarti` uses it for:** every layer-1 constraint (`likec4_element`,
+`likec4_relation`, `likec4_absent_relation`), the container half of the ownership
+seam, and the diagrams injected into `docs/architecture.md`.
+
+```c4
+// model/arch/todo.c4
+web = container 'Web UI' {
+  metadata {
+    owns 'Task, TaskList'        // ← the seam: names LinkML classes
+  }
+}
+```
+
+### LinkML — schema
+
+**Responsible for:** validating `model/schema/*.yaml`, resolving it as a
+`SchemaView`, and generating SHACL, ER diagrams and implementation projections
+(`gen-pydantic`, `gen-typescript`, `gen-sqlddl`, `gen-json-schema`).
+
+**`slarti` uses it for:** every layer-2 constraint (`linkml_class`, `linkml_slot`),
+the entity half of the ownership seam, and converting YAML fixtures to RDF.
+
+```yaml
+# model/schema/todo.yaml
+classes:
+  Task:
+    annotations:
+      owner: todo.web            # ← the seam: names a LikeC4 container
+    attributes:
+      list:
+        required: true
+```
+
+### pyshacl — instances
+
+**Responsible for:** running a shapes graph against a data graph and naming every
+violated shape.
+
+**`slarti` uses it for:** every layer-3 constraint (`shacl_shape`). Each such rule
+declares one negative fixture; `slarti check` asserts the fixture *fails* and that
+the report *names that rule's shape*, so a shape that quietly stops firing becomes a
+finding instead of a green build.
+
+```turtle
+# model/shapes/invariants.ttl
+todo:SubtaskSharesListWithParent a sh:NodeShape ;
+  sh:targetClass todo:Task ; ... .
+```
+
+### How the seams match up — one example
+
+One rule, `D8 — a subtask belongs to the same list as its parent`, touches all three:
+
+```yaml
+# model/constraints.yaml
+- id: D8
+  statement: A subtask belongs to the same list as its parent.
+  enforced_by:
+    layer: 3
+    kind: shacl_shape
+    ref: "todo:SubtaskSharesListWithParent"
+    fixture: model/data/invalid/D8.yaml
+    fixture_class: Task
+```
+
+Running `slarti check` walks the seams in order:
+
+1. **LikeC4 ↔ LinkML.** `todo.web` claims `Task`; `Task` names `todo.web` as its
+   owner. Delete either side and you get `OWN-3` or `OWN-4` — neither tool alone
+   would have noticed.
+2. **Registry ↔ models.** `todo:SubtaskSharesListWithParent` must exist in the
+   merged shapes graph, or `D8` is a `REG-1` finding: the document would otherwise
+   still claim the rule is enforced.
+3. **Registry ↔ data.** `model/data/invalid/D8.yaml` is converted by LinkML and run
+   through pyshacl. It must fail (`REG-6`) *and* the report must name
+   `todo:SubtaskSharesListWithParent` (`REG-7`).
+4. **Document ↔ everything.** `slarti docs --check` regenerates the constraints
+   table and fails if the committed `docs/architecture.md` no longer matches
+   (`DOC-1`).
+
+Each tool decided only what it can see. `slarti` decided nothing about tasks, lists
+or diagrams — only that the three answers still refer to the same thing.
+
 ## Install
 
 ```bash
