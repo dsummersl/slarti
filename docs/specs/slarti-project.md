@@ -278,8 +278,8 @@ Every check has a stable ID. IDs are permanent; retired checks are never reused.
 | `slarti check --json` | Same, as structured findings on stdout. Human output suppressed. |
 | `slarti docs` | Regenerate diagrams and registry tables; inject into `docs/architecture.md`. |
 | `slarti docs --check` | Regenerate into a temp tree; fail if it differs from the committed tree. The drift gate. |
-| `slarti dangling` | Registry slarti only, in report form: enforced rules, unenforced rules, orphaned shapes. The headline command. |
-| `slarti explain <ID>` | Full description of a check or constraint ID, with remedy. Primarily for agents. |
+| `slarti report` | Every seam in report form: enforced rules, unenforced rules, orphaned shapes, and the check catalogue. The headline command. |
+| `slarti report --json` | The same report, fully detailed: resolved enforcers, shape references, ownership, elements, and every check with its remedy. Primarily for agents. |
 
 **Exit codes:** `0` clean · `1` findings · `2` environment or usage error.
 
@@ -357,9 +357,9 @@ Each of these can change the design. Timebox: one day total.
 |---|-------------|
 | M0 | Spikes S1–S5 resolved and recorded. |
 | M1 | `doctor`, `check` with delegated validations and the ownership slarti. Exit codes and `--json`. |
-| M2 | Registry, resolvers for every `kind`, `REG-*` checks, per-rule negative fixtures, `dangling`. |
+| M2 | Registry, resolvers for every `kind`, `REG-*` checks, per-rule negative fixtures, `report`. |
 | M3 | `docs` and `docs --check`: diagram placement, generated constraint tables, drift gate. |
-| M4 | `init` scaffolding, `AGENTS.md`, CI workflow template, `explain`. |
+| M4 | `init` scaffolding, `AGENTS.md`, CI workflow template, the check catalogue in `report`. |
 | M5 | Dogfood (I13), example project, docs, PyPI release. |
 
 ## 15. Risks

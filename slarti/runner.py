@@ -46,23 +46,3 @@ def _checked(ctx: Context, delegations: int, include_docs: bool) -> int:
     docs_count = 4 if include_docs else 0
     seams = len(ctx.constraints) + len(ctx.models.shapes)
     return delegations + classes + elements + seams + docs_count
-
-
-@dataclass(frozen=True)
-class Dangling:
-    """The registry seam in report form."""
-
-    enforced: list[Constraint]
-    unenforced: list[Constraint]
-    orphaned: list[str]
-
-
-def dangling(ctx: Context) -> Dangling:
-    """Enforced rules, unenforced rules, and shapes no rule references."""
-    ordered = sorted(ctx.constraints, key=lambda c: c.id)
-    referenced = registry.referenced_shapes(ctx.constraints)
-    return Dangling(
-        enforced=[c for c in ordered if not c.enforcer.is_none],
-        unenforced=[c for c in ordered if c.enforcer.is_none],
-        orphaned=sorted(set(ctx.models.shapes) - referenced),
-    )

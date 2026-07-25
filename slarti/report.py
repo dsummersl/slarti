@@ -1,0 +1,295 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import Any
+
+from slarti import __version__, resolvers
+from slarti.checks import ownership as ownership_checks
+from slarti.models import Models
+from slarti.registry import Constraint
+
+CHECKS: dict[str, str] = {
+    "OWN-1": (
+        "A schema class declares no owning container.\n"
+        "Remedy: add 'annotations: {owner: <likec4-element-id>}' to the class, and list the "
+        "class under that element's 'owns' metadata."
+    ),
+    "OWN-2": (
+        "A schema class names an owner that is not an element in the LikeC4 model.\n"
+        "Remedy: correct the owner annotation, or add the element to the model."
+    ),
+    "OWN-3": (
+        "A schema class names an owner that does not claim it back.\n"
+        "Remedy: add the class name to that element's 'owns' metadata."
+    ),
+    "OWN-4": (
+        "A LikeC4 element claims an entity that is not a class in the schema.\n"
+        "Remedy: remove the entity from 'owns', or add the class to the schema."
+    ),
+    "OWN-5": (
+        "A schema class is claimed by more than one container.\n"
+        "Remedy: leave the class in exactly one element's 'owns' metadata."
+    ),
+    "REG-1": (
+        "A constraint points at an enforcer that does not exist.\n"
+        "Remedy: create the enforcer, correct the ref, or record the rule as "
+        "'enforced_by: none' with a reason."
+    ),
+    "REG-2": (
+        "A SHACL shape exists that no constraint references.\n"
+        "Remedy: add a constraint with enforced_by.kind=shacl_shape and that ref, or delete "
+        "the shape."
+    ),
+    "REG-3": (
+        "A constraint is unenforced but gives no reason.\n"
+        "Remedy: add a 'reason' explaining why the rule cannot be mechanically enforced."
+    ),
+    "REG-4": "A constraint ID is declared twice.\nRemedy: give every constraint a unique ID.",
+    "REG-5": (
+        "A constraint cites a decision the document never records.\n"
+        "Remedy: document the decision, or drop the 'decision' field."
+    ),
+    "REG-6": (
+        "A declared negative fixture is missing, unloadable, or conforms.\n"
+        "Remedy: make the fixture exist and violate the declared shape."
+    ),
+    "REG-7": (
+        "A negative fixture fails, but the report never names the declared shape.\n"
+        "Remedy: narrow the fixture, or correct the declared ref."
+    ),
+    "DOC-1": (
+        "A generated region is stale relative to its source.\n"
+        "Remedy: run 'slarti docs' and commit the result."
+    ),
+    "DOC-2": (
+        "A generated diagram differs from what the model generates — it was hand-edited.\n"
+        "Remedy: never edit files under the diagrams directory; run 'slarti docs'."
+    ),
+    "DOC-3": (
+        "A region marker is unbalanced, or names a region slarti cannot fill.\n"
+        "Remedy: balance the markers; use constraints, unverified, ownership or diagram:<view>."
+    ),
+    "DOC-4": (
+        "A constraint in the registry has no row in the generated tables.\n"
+        "Remedy: this is a generation bug in slarti; report it with the registry entry."
+    ),
+    "ENV-1": (
+        "A delegated tool is missing or outside its supported version range.\n"
+        "Remedy: run 'slarti doctor' and install a version inside the range."
+    ),
+}
+
+REMEDY_PREFIX = "Remedy:"
+
+
+@dataclass(frozen=True)
+class Check:
+    """One check ID, its description and its remedy."""
+
+    id: str
+    description: str
+    remedy: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"id": self.id, "description": self.description, "remedy": self.remedy}
+
+
+def _check(identifier: str, text: str) -> Check:
+    description, _, remedy = text.partition(REMEDY_PREFIX)
+    return Check(id=identifier, description=description.strip(), remedy=remedy.strip())
+
+
+def catalogue() -> list[Check]:
+    """Every check slarti can emit, in ID order."""
+    return [_check(identifier, text) for identifier, text in sorted(CHECKS.items())]
+
+
+@dataclass(frozen=True)
+class Rule:
+    """A registry constraint with its enforcer resolved against the models."""
+
+    constraint: Constraint
+    resolves: bool
+
+    @property
+    def enforced(self) -> bool:
+        return not self.constraint.enforcer.is_none
+
+    def as_dict(self) -> dict[str, Any]:
+        c = self.constraint
+        e = c.enforcer
+        return {
+            "id": c.id,
+            "statement": c.statement,
+            "line": c.line,
+            "decision": c.decision,
+            "reason": c.reason,
+            "enforced": self.enforced,
+            "enforcer": {
+                "layer": e.layer,
+                "kind": e.kind,
+                "ref": e.ref,
+                "fixture": e.fixture,
+                "fixture_class": e.fixture_class,
+                "description": resolvers.describe(e),
+                "resolves": self.resolves,
+            },
+        }
+
+
+@dataclass(frozen=True)
+class Shape:
+    """A SHACL shape, where it lives, and the rules that reference it."""
+
+    curie: str
+    file: str
+    referenced_by: list[str]
+
+    @property
+    def orphaned(self) -> bool:
+        return not self.referenced_by
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "curie": self.curie,
+            "file": self.file,
+            "referenced_by": self.referenced_by,
+            "orphaned": self.orphaned,
+        }
+
+
+@dataclass(frozen=True)
+class Owned:
+    """A schema class, the owner it names, and the elements claiming it."""
+
+    name: str
+    owner: str | None
+    claimed_by: list[str]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"class": self.name, "owner": self.owner, "claimed_by": self.claimed_by}
+
+
+@dataclass(frozen=True)
+class Report:
+    """The whole state of the project: rules, shapes, ownership and checks."""
+
+    rules: list[Rule]
+    shapes: list[Shape]
+    ownership: list[Owned]
+    elements: list[dict[str, Any]]
+    checks: list[Check]
+
+    @property
+    def enforced(self) -> list[Rule]:
+        return [r for r in self.rules if r.enforced]
+
+    @property
+    def unenforced(self) -> list[Rule]:
+        return [r for r in self.rules if not r.enforced]
+
+    @property
+    def orphaned(self) -> list[Shape]:
+        return [s for s in self.shapes if s.orphaned]
+
+    def as_json(self) -> str:
+        payload = {
+            "seam_version": __version__,
+            "constraints": [r.as_dict() for r in self.rules],
+            "shapes": [s.as_dict() for s in self.shapes],
+            "ownership": [o.as_dict() for o in self.ownership],
+            "elements": self.elements,
+            "checks": [c.as_dict() for c in self.checks],
+            "summary": {
+                "constraints": len(self.rules),
+                "enforced": len(self.enforced),
+                "unenforced": len(self.unenforced),
+                "shapes": len(self.shapes),
+                "orphaned_shapes": len(self.orphaned),
+                "elements": len(self.elements),
+                "classes": len(self.ownership),
+                "checks": len(self.checks),
+            },
+        }
+        return json.dumps(payload, indent=2, sort_keys=False)
+
+    def as_text(self) -> str:
+        lines = ["Enforced:"]
+        lines.extend(_enforced_lines(self.enforced))
+        lines.append("Unenforced (declared, with a reason):")
+        lines.extend(_unenforced_lines(self.unenforced))
+        lines.append("Orphaned shapes (declared, unreferenced):")
+        lines.extend(f"  {s.curie}  {s.file}" for s in self.orphaned)
+        lines.append("Checks:")
+        lines.extend(f"  {c.id}  {c.description.splitlines()[0]}" for c in self.checks)
+        lines.append(
+            f"{len(self.enforced)} enforced, {len(self.unenforced)} unenforced, "
+            f"{len(self.orphaned)} orphaned shape(s)."
+        )
+        return "\n".join(lines)
+
+
+def _enforced_lines(rules: list[Rule]) -> list[str]:
+    lines = []
+    for rule in rules:
+        enforcer = resolvers.describe(rule.constraint.enforcer)
+        mark = "" if rule.resolves else "  (UNRESOLVED)"
+        lines.append(f"  {rule.constraint.id}  {rule.constraint.statement}")
+        lines.append(f"      <- {rule.constraint.enforcer.kind} {enforcer}{mark}")
+    return lines
+
+
+def _unenforced_lines(rules: list[Rule]) -> list[str]:
+    lines = []
+    for rule in rules:
+        lines.append(f"  {rule.constraint.id}  {rule.constraint.statement}")
+        lines.append(f"      reason: {rule.constraint.reason or '-'}")
+    return lines
+
+
+def _shapes(models: Models, constraints: list[Constraint]) -> list[Shape]:
+    shapes = []
+    for curie, path in sorted(models.shapes.items()):
+        referenced_by = sorted(
+            c.id
+            for c in constraints
+            if c.enforcer.kind == "shacl_shape" and c.enforcer.ref == curie
+        )
+        shapes.append(
+            Shape(curie=curie, file=models.config.rel(path), referenced_by=referenced_by)
+        )
+    return shapes
+
+
+def _ownership(models: Models) -> list[Owned]:
+    return [
+        Owned(
+            name=name,
+            owner=models.class_annotation(name, ownership_checks.OWNER_ANNOTATION),
+            claimed_by=models.likec4.owners_of(name),
+        )
+        for name in ownership_checks.owned_classes(models)
+    ]
+
+
+def _elements(models: Models) -> list[dict[str, Any]]:
+    return [
+        {"id": e.id, "title": e.title, "kind": e.kind, "owns": list(e.owns)}
+        for e in models.likec4.elements.values()
+    ]
+
+
+def build(models: Models, constraints: list[Constraint]) -> Report:
+    """Resolve every seam into one report."""
+    ordered = sorted(constraints, key=lambda c: c.id)
+    return Report(
+        rules=[Rule(c, resolvers.resolve(models, c.enforcer)) for c in ordered],
+        shapes=_shapes(models, ordered),
+        ownership=_ownership(models),
+        elements=_elements(models),
+        checks=catalogue(),
+    )
+
+
+__all__ = ["Check", "Owned", "Report", "Rule", "Shape", "build", "catalogue"]

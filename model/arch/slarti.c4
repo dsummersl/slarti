@@ -16,7 +16,7 @@ model {
     description 'Coordinates LikeC4 and LinkML across the joins neither can see.'
 
     cli = container 'CLI' {
-      description 'typer commands: init, doctor, check, docs, dangling, explain.'
+      description 'typer commands: init, doctor, check, docs, report.'
     }
 
     runner = container 'Runner' {

@@ -24,7 +24,7 @@ Findings, not exit codes, are the interface. Every finding carries a stable rule
 ID (`OWN-1`, `REG-2`, `DOC-1`, `ENV-1`), a file, a subject named in domain terms,
 a message and a remedy sentence. The same findings render as text or as JSON;
 `--json` changes the encoding, never the content. IDs are permanent — retired
-checks are never reused — and `slarti explain <ID>` describes any of them.
+checks are never reused — and `slarti report --json` describes all of them.
 
 Because the findings are the contract, the entities they are about are modelled
 first-class: `Finding`, `Report`, `Constraint` and `Enforcer` are classes in
@@ -38,7 +38,7 @@ reformatted as findings.
 
 - Agents can converge: run `slarti check --json`, apply the remedy, re-run.
 - Message wording is part of the contract, and is covered by tests.
-- Adding a check means adding an ID, a remedy sentence and an `explain` entry —
+- Adding a check means adding an ID, a remedy sentence and a catalogue entry —
   slightly more work than raising an exception, deliberately.
 - Rules that no model can enforce are recorded as `enforced_by: none` with a
   reason and surface in the unverified-invariants table rather than being silently
