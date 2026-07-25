@@ -18,6 +18,9 @@ dependencies = [
   "pydantic>=2.11",
 ]
 
+[project.urls]
+Repository = "https://github.com/dsummersl/slartiarch"
+
 [project.scripts]
 slartiarch = "slarti.cli:main"
 
