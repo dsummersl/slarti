@@ -8,6 +8,7 @@ import typer
 from slarti import config as config_module
 from slarti import docs, env, report, runner, scaffold
 from slarti.checks import doc_checks
+from slarti.domain import Probe
 from slarti.models import ModelError
 from slarti.registry import RegistryError
 
@@ -67,9 +68,9 @@ def doctor() -> None:
     raise typer.Exit(EXIT_CLEAN if all(p.ok for p in probes) else EXIT_ENVIRONMENT)
 
 
-def _probe_line(probe: env.Probe) -> str:
+def _probe_line(probe: Probe) -> str:
     mark = "ok  " if probe.ok else "FAIL"
-    return f"{mark} {probe.tool:8} {probe.version_text:10} {probe.location or '-'}"
+    return f"{mark} {probe.tool:8} {(probe.version or '-'):10} {probe.location or '-'}"
 
 
 @app.command()

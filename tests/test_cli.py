@@ -50,7 +50,7 @@ def test_report_json_is_fully_detailed(tmp_path: Path, monkeypatch) -> None:
 
 def _constraint() -> Constraint:
     enforcer = Enforcer(layer=1, kind="linkml_class", ref="Task", fixture=None, fixture_class=None)
-    return Constraint("C1", "Tasks exist.", enforcer, None, None, line=3)
+    return Constraint(id="C1", statement="Tasks exist.", enforced_by=enforcer, line=3)
 
 
 def test_check_without_a_project_is_an_environment_error(tmp_path: Path, monkeypatch) -> None:
@@ -69,7 +69,8 @@ def stub_context(tmp_path: Path, constraints=()) -> runner.Context:
 def test_check_reports_findings_and_exits_one(tmp_path: Path, monkeypatch) -> None:
     ctx = stub_context(tmp_path)
     monkeypatch.setattr("slarti.cli._context", lambda: ctx)
-    finding = Finding("OWN-1", "error", "f", "Task", "class 'Task' has no owner.", "Add an owner.")
+    finding = Finding(id="OWN-1", severity="error", file="f", subject="Task",
+                      message="class 'Task' has no owner.", remedy="Add an owner.")
     monkeypatch.setattr(runner, "check", lambda ctx, include_docs=True: (_report(finding), True))
     result = RUNNER.invoke(app, ["check"])
     assert result.exit_code == 1

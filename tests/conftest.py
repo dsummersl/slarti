@@ -36,11 +36,11 @@ def make_config(root: Path) -> Config:
 
 def make_model(owns: tuple[str, ...] = ("Task",)) -> Likec4Model:
     elements = {
-        "todo": Element("todo", "Todo", "system", ()),
-        "todo.api": Element("todo.api", "API", "container", owns),
-        "todo.db": Element("todo.db", "DB", "container", ()),
+        "todo": Element(id="todo", title="Todo", kind="system", owns=[]),
+        "todo.api": Element(id="todo.api", title="API", kind="container", owns=list(owns)),
+        "todo.db": Element(id="todo.db", title="DB", kind="container", owns=[]),
     }
-    relations = (Relation("todo.api", "todo.db", "reads"),)
+    relations = (Relation(source="todo.api", target="todo.db", title="reads"),)
     return Likec4Model(elements=elements, relations=relations, views=("index",))
 
 

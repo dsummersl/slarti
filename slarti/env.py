@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from slarti import proc
-from slarti.findings import Finding
+from slarti.domain import Probe
+from slarti.findings import Finding, Severity
 
 VERSION_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
 
@@ -44,19 +45,16 @@ REQUIREMENTS: list[Requirement] = [
 ]
 
 
-@dataclass(frozen=True)
-class Probe:
-    """The observed state of one delegated tool."""
+def version_text(version: Version | None) -> str:
+    """A version tuple as the string the generated `Probe` carries."""
+    return "not found" if version is None else ".".join(str(p) for p in version)
 
-    tool: str
-    version: Version | None
-    location: str | None
-    detail: str
-    ok: bool
 
-    @property
-    def version_text(self) -> str:
-        return "not found" if self.version is None else ".".join(str(p) for p in self.version)
+def _probe(req_tool: str, version: Version | None, location: str | None, detail: str,
+           ok: bool) -> Probe:
+    return Probe(
+        tool=req_tool, version=version_text(version), location=location, detail=detail, ok=ok
+    )
 
 
 def parse_version(text: str) -> Version | None:
@@ -86,10 +84,10 @@ def probe(req: Requirement, cwd: Path | None = None) -> Probe:
     try:
         result = proc.run(req.argv, cwd=cwd)
     except proc.ToolMissing:
-        return Probe(req.tool, None, None, f"{req.argv[0]} not found on PATH", False)
+        return _probe(req.tool, None, None, f"{req.argv[0]} not found on PATH", False)
     version = parse_version(result.stdout) or parse_version(result.stderr)
     if version is None:
-        return Probe(req.tool, None, _locate(req), "version could not be determined", False)
+        return _probe(req.tool, None, _locate(req), "version could not be determined", False)
     return _classify(req, version)
 
 
@@ -99,16 +97,16 @@ def _in_range(req: Requirement, version: Version) -> bool:
 
 def _classify(req: Requirement, version: Version) -> Probe:
     if _in_range(req, version):
-        return Probe(req.tool, version, _locate(req), f"within {range_text(req)}", True)
+        return _probe(req.tool, version, _locate(req), f"within {range_text(req)}", True)
     detail = f"requires {range_text(req)}; upgrade with: {req.upgrade}"
-    return Probe(req.tool, version, _locate(req), detail, False)
+    return _probe(req.tool, version, _locate(req), detail, False)
 
 
 def probe_python() -> Probe:
     version = sys.version_info[:3]
     ok = (3, 11, 0) <= version < (4, 0, 0)
     detail = "within >=3.11,<4" if ok else "requires >=3.11,<4"
-    return Probe("python", version, sys.executable, detail, ok)
+    return _probe("python", version, sys.executable, detail, ok)
 
 
 def probe_all(cwd: Path | None = None) -> list[Probe]:
@@ -121,10 +119,10 @@ def env_findings(probes: list[Probe]) -> list[Finding]:
     return [
         Finding(
             id="ENV-1",
-            severity="error",
+            severity=Severity.error,
             file="-",
             subject=p.tool,
-            message=f"{p.tool} {p.version_text} is unusable: {p.detail}.",
+            message=f"{p.tool} {p.version} is unusable: {p.detail}.",
             remedy=f"Install a {p.tool} version that satisfies the supported range, then re-run.",
         )
         for p in probes

@@ -6,14 +6,14 @@ from slarti.registry import Constraint, Enforcer
 ENFORCED = Constraint(
     id="D1",
     statement="A task belongs to exactly one list.",
-    enforcer=Enforcer(2, "linkml_slot", "Task.list", None, None),
+    enforced_by=Enforcer(layer=2, kind="linkml_slot", ref="Task.list"),
     reason=None,
     decision="ADR-004",
 )
 UNENFORCED = Constraint(
     id="U1",
     statement="The API checks membership.",
-    enforcer=Enforcer(None, None, None, None, None),
+    enforced_by=Enforcer(),
     reason="No implementation exists.",
     decision=None,
 )

@@ -15,6 +15,7 @@ dependencies = [
   "rdflib>=7.6",
   "pyyaml>=6.0.3",
   "tomli-w>=1.2",
+  "pydantic>=2.11",
 ]
 
 [project.scripts]
@@ -45,7 +46,8 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-exclude = [".venv", ".git", "build", "dist"]
+# slarti/domain.py is GENERATED from model/schema/slarti.yaml (`make domain`).
+exclude = [".venv", ".git", "build", "dist", "slarti/domain.py"]
 lint.select = [
   "E",   # pycodestyle
   "F",   # Pyflakes
@@ -68,9 +70,16 @@ packages = ["slarti"]
 module = ["linkml_runtime.*"]
 ignore_missing_imports = true
 
+# GENERATED code: the schema is reviewed, the projection of it is not.
+[[tool.mypy.overrides]]
+module = ["slarti.domain"]
+ignore_errors = true
+
 [tool.vulture]
 # typer registers these as commands; vulture cannot see the decorator.
 ignore_names = ["doctor", "docs_command", "report_command"]
+# GENERATED: every generated slot looks unused to a caller-graph scan.
+exclude = ["slarti/domain.py"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=slarti  --cov-report=term-missing"

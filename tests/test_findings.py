@@ -32,8 +32,8 @@ def test_findings_are_sorted_stably() -> None:
 
 
 def test_line_is_omitted_when_unknown() -> None:
-    bare = Finding("OWN-1", "error", "f", "s", "m", "r")
-    assert "line" not in bare.as_dict()
+    bare = Finding(id="OWN-1", severity="error", file="f", subject="s", message="m", remedy="r")
+    assert "line" not in bare.model_dump(exclude_none=True)
 
 
 def test_text_output_names_file_and_remedy() -> None:

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+
+from slarti.domain import Region
 
 BEGIN = "<!-- slarti:begin {region} -->"
 END = "<!-- slarti:end {region} -->"
@@ -11,15 +12,6 @@ END_RE = re.compile(r"<!--\s*slarti:end\s+(?P<region>[^\s>]+)\s*-->")
 
 class MarkerError(Exception):
     """Raised when generated-region markers are malformed."""
-
-
-@dataclass(frozen=True)
-class Region:
-    """One generated region found in the document."""
-
-    name: str
-    body: str
-    line: int
 
 
 def _line_of(text: str, index: int) -> int:

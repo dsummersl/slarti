@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from slarti import docs, generate, inject
 from slarti.config import Config
-from slarti.findings import Finding
+from slarti.findings import Finding, Severity
 from slarti.models import Models
 from slarti.registry import Constraint
 
@@ -10,7 +10,7 @@ from slarti.registry import Constraint
 def _doc3(config: Config, message: str, subject: str, remedy: str) -> Finding:
     return Finding(
         id="DOC-3",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["document"],
         subject=subject,
         message=message,
@@ -33,7 +33,7 @@ def _marker_findings(config: Config, unknown: tuple[str, ...]) -> list[Finding]:
 def _stale(config: Config, region: str) -> Finding:
     return Finding(
         id="DOC-1",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["document"],
         subject=region,
         message=f"generated region '{region}' no longer matches the model it came from.",
@@ -44,7 +44,7 @@ def _stale(config: Config, region: str) -> Finding:
 def _hand_edited(config: Config, name: str) -> Finding:
     return Finding(
         id="DOC-2",
-        severity="error",
+        severity=Severity.error,
         file=f"{config.paths['diagrams']}/{name}.mmd",
         subject=name,
         message=f"generated diagram '{name}' differs from what the model generates.",
@@ -55,7 +55,7 @@ def _hand_edited(config: Config, name: str) -> Finding:
 def _doc4(config: Config, constraint_id: str) -> Finding:
     return Finding(
         id="DOC-4",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["document"],
         subject=constraint_id,
         message=(

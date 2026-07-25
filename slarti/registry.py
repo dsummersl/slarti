@@ -1,55 +1,56 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import ValidationError
+
+from slarti.domain import Constraint, Enforcer, EnforcerKind
+
+__all__ = [
+    "Constraint",
+    "Enforcer",
+    "EnforcerKind",
+    "RegistryError",
+    "is_unenforced",
+    "kind_text",
+    "load",
+    "load_enforcer",
+    "referenced_shapes",
+]
 
 
 class RegistryError(Exception):
     """Raised when the constraint registry cannot be read."""
 
 
-@dataclass(frozen=True)
-class Enforcer:
-    """How a constraint is enforced, or the honest absence of enforcement."""
-
-    layer: int | None
-    kind: str | None
-    ref: str | None
-    fixture: str | None
-    fixture_class: str | None
-
-    @property
-    def is_none(self) -> bool:
-        return self.kind is None
+def is_unenforced(enforcer: Enforcer) -> bool:
+    """An enforcer with no kind is the honest record of a rule nothing enforces."""
+    return enforcer.kind is None
 
 
-@dataclass(frozen=True)
-class Constraint:
-    """One rule in the registry, with its enforcer and provenance."""
-
-    id: str
-    statement: str
-    enforcer: Enforcer
-    reason: str | None
-    decision: str | None
-    line: int | None = None
+def kind_text(enforcer: Enforcer) -> str:
+    """The enforcer kind as it is written in the registry, or 'none'."""
+    return "none" if enforcer.kind is None else str(enforcer.kind)
 
 
-def _enforcer(raw: Any) -> Enforcer:
+def load_enforcer(raw: Any) -> Enforcer:
     if raw in (None, "none"):
-        return Enforcer(None, None, None, None, None)
+        return Enforcer()
     if not isinstance(raw, dict):
         raise RegistryError(f"enforced_by must be a mapping or 'none', got: {raw!r}")
-    return Enforcer(
-        layer=raw.get("layer"),
-        kind=raw.get("kind"),
-        ref=raw.get("ref"),
-        fixture=raw.get("fixture"),
-        fixture_class=raw.get("fixture_class"),
-    )
+    try:
+        return Enforcer(
+            layer=raw.get("layer"),
+            kind=raw.get("kind"),
+            ref=raw.get("ref"),
+            fixture=raw.get("fixture"),
+            fixture_class=raw.get("fixture_class"),
+        )
+    except ValidationError as exc:
+        kinds = ", ".join(k.value for k in EnforcerKind)
+        raise RegistryError(f"Invalid enforcer {raw!r}. Enforcer kinds are: {kinds}.") from exc
 
 
 def _constraint(raw: dict[str, Any]) -> Constraint:
@@ -58,7 +59,7 @@ def _constraint(raw: dict[str, Any]) -> Constraint:
     return Constraint(
         id=str(raw["id"]),
         statement=str(raw["statement"]).strip(),
-        enforcer=_enforcer(raw.get("enforced_by")),
+        enforced_by=load_enforcer(raw.get("enforced_by")),
         reason=None if raw.get("reason") is None else str(raw["reason"]).strip(),
         decision=None if raw.get("decision") is None else str(raw["decision"]),
     )
@@ -72,22 +73,14 @@ def _locate_ids(path: Path, constraints: list[Constraint]) -> list[Constraint]:
         number = next(
             (i for i, t in enumerate(lines, 1) if t.strip() in (needle, f"- {needle}")), None
         )
-        located.append(
-            Constraint(
-                constraint.id,
-                constraint.statement,
-                constraint.enforcer,
-                constraint.reason,
-                constraint.decision,
-                number,
-            )
-        )
+        located.append(constraint.model_copy(update={"line": number}))
     return located
 
 
 def referenced_shapes(constraints: list[Constraint]) -> set[str]:
     """Every SHACL shape the registry points at."""
-    refs = (c.enforcer.ref for c in constraints if c.enforcer.kind == "shacl_shape")
+    shacl = EnforcerKind.shacl_shape
+    refs = (c.enforced_by.ref for c in constraints if c.enforced_by.kind == shacl)
     return {ref for ref in refs if ref}
 
 

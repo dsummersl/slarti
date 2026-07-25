@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from slarti.models import Models
-from slarti.registry import Enforcer
+from slarti.registry import Enforcer, is_unenforced, kind_text
 
 RELATION_ARROW = "->"
 
@@ -59,9 +59,9 @@ RESOLVERS: dict[str, Callable[[Models, str], bool]] = {
 
 def describe(enforcer: Enforcer) -> str:
     """Human phrasing of an enforcer, for tables and messages."""
-    if enforcer.is_none:
+    if is_unenforced(enforcer):
         return "none"
-    return f"`{enforcer.ref}`" if enforcer.ref else str(enforcer.kind)
+    return f"`{enforcer.ref}`" if enforcer.ref else kind_text(enforcer)
 
 
 def resolve(models: Models, enforcer: Enforcer) -> bool:

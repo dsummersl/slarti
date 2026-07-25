@@ -83,15 +83,29 @@ classes:
         range: Finding
         multivalued: true
         inlined_as_list: true
+      summary:
+        description: The counts a caller reads before deciding whether to fail.
+        range: Summary
+        inlined: true
+        required: true
+
+  Summary:
+    description: How a run came out, in counts.
+    annotations:
+      owner: slarti.findings
+    attributes:
       errors:
         description: How many findings fail the build.
         range: integer
+        required: true
       warnings:
         description: How many findings merely inform.
         range: integer
+        required: true
       checked:
         description: How many checks the run performed.
         range: integer
+        required: true
 
   Constraint:
     description: One rule in the registry, with the enforcer that holds it.
@@ -105,13 +119,19 @@ classes:
         description: The rule, stated in one sentence of prose.
         required: true
       enforced_by:
-        description: The enforcer that holds the rule, if there is one.
+        description: >-
+          The enforcer that holds the rule. Always present; an enforcer with no kind
+          is the honest record of a rule nothing mechanically enforces.
         range: Enforcer
         inlined: true
+        required: true
       reason:
         description: Why the rule is not mechanically enforced. Required when there is no enforcer.
       decision:
         description: The decision record that introduced the rule.
+      line:
+        description: Where the rule sits in the registry file.
+        range: integer
 
   Enforcer:
     description: The thing that actually holds a rule, and the fixture that proves it fires.
@@ -141,11 +161,14 @@ classes:
         identifier: true
       title:
         description: The element's display title.
+        required: true
       kind:
         description: The element kind declared in the specification block.
+        required: true
       owns:
         description: The schema classes this element claims.
         multivalued: true
+        required: true
 
   Relation:
     description: A relation between two LikeC4 elements.
@@ -160,6 +183,7 @@ classes:
         required: true
       title:
         description: What the relation is called.
+        required: true
 
   Region:
     description: A generated region of the architecture document, between two markers.
@@ -171,9 +195,11 @@ classes:
         identifier: true
       body:
         description: The generated content between the markers.
+        required: true
       line:
         description: Where the opening marker sits in the document.
         range: integer
+        required: true
 
   Probe:
     description: The observed version and location of one delegated tool.
@@ -184,14 +210,17 @@ classes:
         description: The tool that was probed.
         identifier: true
       version:
-        description: The version the probe detected.
+        description: The version the probe detected, or 'not found'.
+        required: true
       location:
         description: Where the binary was found.
       detail:
         description: The supported range, or why the probe failed.
+        required: true
       ok:
         description: Whether the tool may be used.
         range: boolean
+        required: true
 
   ProjectPaths:
     description: Where the model sources and the document live. Paths only (I6).

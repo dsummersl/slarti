@@ -85,6 +85,15 @@ constraints:
       No model can assert that a subprocess was passed through unaltered. Verified by
       a test asserting byte-identical diagnostics.
 
+  - id: U4
+    statement: The Python interfaces the implementation uses are generated from the schema.
+    enforced_by: none
+    reason: >-
+      No model can assert that a module imports a generated projection rather than a
+      copy of it. Verified instead by a test that regenerates slarti/domain.py from
+      model/schema/slarti.yaml and fails if the committed file differs.
+    decision: ADR-0003
+
   - id: U3
     statement: Generation is idempotent — running slarti docs twice produces identical output.
     enforced_by: none

@@ -30,8 +30,8 @@ def write_registry(path: Path, text: str = REGISTRY) -> Path:
 def test_load_reads_both_forms(tmp_path: Path) -> None:
     constraints = registry.load(write_registry(tmp_path / "constraints.yaml"))
     assert [c.id for c in constraints] == ["D1", "U1"]
-    assert constraints[0].enforcer.kind == "linkml_slot"
-    assert constraints[1].enforcer.is_none
+    assert constraints[0].enforced_by.kind == "linkml_slot"
+    assert registry.is_unenforced(constraints[1].enforced_by)
     assert constraints[0].line is not None
 
 
@@ -41,12 +41,13 @@ def test_missing_registry_is_an_error(tmp_path: Path) -> None:
 
 
 def test_resolvers_answer_both_directions(models) -> None:
-    assert resolvers.resolve(models, registry.Enforcer(2, "linkml_slot", "Task.list", None, None))
-    gone = registry.Enforcer(2, "linkml_slot", "Task.gone", None, None)
+    here = registry.Enforcer(layer=2, kind="linkml_slot", ref="Task.list")
+    assert resolvers.resolve(models, here)
+    gone = registry.Enforcer(layer=2, kind="linkml_slot", ref="Task.gone")
     assert not resolvers.resolve(models, gone)
-    absent = registry.Enforcer(1, "likec4_absent_relation", "todo.db -> todo.api", None, None)
+    absent = registry.Enforcer(layer=1, kind="likec4_absent_relation", ref="todo.db -> todo.api")
     assert resolvers.resolve(models, absent)
-    present = registry.Enforcer(1, "likec4_relation", "todo.api -> todo.db", None, None)
+    present = registry.Enforcer(layer=1, kind="likec4_relation", ref="todo.api -> todo.db")
     assert resolvers.resolve(models, present)
 
 
