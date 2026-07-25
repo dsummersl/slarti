@@ -1,0 +1,8 @@
+# A constraint with neither an enforcer nor a reason:
+# slarti:UnenforcedConstraintGivesReason must fire.
+@prefix slarti: <https://dsummersl.github.io/slarti/> .
+
+<https://dsummersl.github.io/slarti/data/constraint-without-reason>
+  a slarti:Constraint ;
+  slarti:id "X9" ;
+  slarti:statement "Some rule that nothing enforces and nobody explains." .

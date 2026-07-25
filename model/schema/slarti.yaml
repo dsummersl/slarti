@@ -1,0 +1,218 @@
+id: https://dsummersl.github.io/slarti
+name: slarti
+title: The slarti domain
+description: >-
+  The entities slarti reasons about. Every class names the container that owns it;
+  every owning container claims it back (OWN-1..OWN-5).
+prefixes:
+  slarti: https://dsummersl.github.io/slarti/
+  linkml: https://w3id.org/linkml/
+default_prefix: slarti
+default_range: string
+imports:
+  - linkml:types
+
+enums:
+  Severity:
+    description: Whether a finding blocks the build or merely informs.
+    permissible_values:
+      error:
+        description: The build fails.
+      warning:
+        description: The build continues.
+
+  EnforcerKind:
+    description: The enforcer kinds a constraint may name.
+    permissible_values:
+      shacl_shape:
+        description: A hand-written SHACL shape.
+      linkml_slot:
+        description: A slot on a schema class.
+      linkml_class:
+        description: A schema class.
+      likec4_relation:
+        description: A relation that must exist in the model.
+      likec4_absent_relation:
+        description: A relation that must not exist in the model.
+      likec4_element:
+        description: An element that must exist in the model.
+      ownership:
+        description: The ownership seam between the schema and the model.
+      external:
+        description: Something outside both models, which must give a reason.
+
+classes:
+  Finding:
+    description: One machine-readable check result, addressed to a human or an agent.
+    annotations:
+      owner: slarti.findings
+    attributes:
+      id:
+        description: A stable check ID such as OWN-1; retired IDs are never reused.
+        required: true
+      severity:
+        description: Whether the finding fails the build.
+        range: Severity
+        required: true
+      file:
+        description: The file the finding is about.
+        required: true
+      line:
+        description: The line in that file, when the source can be located.
+        range: integer
+      subject:
+        description: The entity the finding is about, in domain terms.
+        required: true
+      message:
+        description: What is wrong, phrased in domain terms rather than tool terms.
+        required: true
+      remedy:
+        description: A sentence naming what to change to clear the finding.
+        required: true
+
+  Report:
+    description: The findings of one run, plus the number of checks performed.
+    annotations:
+      owner: slarti.findings
+    attributes:
+      seam_version:
+        description: The version of slarti that produced the report.
+        required: true
+      findings:
+        description: Every finding of the run, in stable order.
+        range: Finding
+        multivalued: true
+        inlined_as_list: true
+      errors:
+        description: How many findings fail the build.
+        range: integer
+      warnings:
+        description: How many findings merely inform.
+        range: integer
+      checked:
+        description: How many checks the run performed.
+        range: integer
+
+  Constraint:
+    description: One rule in the registry, with the enforcer that holds it.
+    annotations:
+      owner: slarti.registry
+    attributes:
+      id:
+        description: The permanent identifier of the rule.
+        identifier: true
+      statement:
+        description: The rule, stated in one sentence of prose.
+        required: true
+      enforced_by:
+        description: The enforcer that holds the rule, if there is one.
+        range: Enforcer
+        inlined: true
+      reason:
+        description: Why the rule is not mechanically enforced. Required when there is no enforcer.
+      decision:
+        description: The decision record that introduced the rule.
+
+  Enforcer:
+    description: The thing that actually holds a rule, and the fixture that proves it fires.
+    annotations:
+      owner: slarti.registry
+    attributes:
+      layer:
+        description: Which layer holds the rule; 1 structure, 2 schema, 3 shapes.
+        range: integer
+      kind:
+        description: What sort of enforcer this is.
+        range: EnforcerKind
+      ref:
+        description: The identifier of the enforcer, resolved against the models.
+      fixture:
+        description: A case that must fail, naming this enforcer in the violation report.
+      fixture_class:
+        description: The schema class a YAML fixture instantiates.
+
+  Element:
+    description: A LikeC4 element, and the entities it claims to own.
+    annotations:
+      owner: slarti.models
+    attributes:
+      id:
+        description: The fully qualified element identifier.
+        identifier: true
+      title:
+        description: The element's display title.
+      kind:
+        description: The element kind declared in the specification block.
+      owns:
+        description: The schema classes this element claims.
+        multivalued: true
+
+  Relation:
+    description: A relation between two LikeC4 elements.
+    annotations:
+      owner: slarti.models
+    attributes:
+      source:
+        description: The element the relation starts at.
+        required: true
+      target:
+        description: The element the relation ends at.
+        required: true
+      title:
+        description: What the relation is called.
+
+  Region:
+    description: A generated region of the architecture document, between two markers.
+    annotations:
+      owner: slarti.docsgen
+    attributes:
+      name:
+        description: The region name in its markers.
+        identifier: true
+      body:
+        description: The generated content between the markers.
+      line:
+        description: Where the opening marker sits in the document.
+        range: integer
+
+  Probe:
+    description: The observed version and location of one delegated tool.
+    annotations:
+      owner: slarti.env
+    attributes:
+      tool:
+        description: The tool that was probed.
+        identifier: true
+      version:
+        description: The version the probe detected.
+      location:
+        description: Where the binary was found.
+      detail:
+        description: The supported range, or why the probe failed.
+      ok:
+        description: Whether the tool may be used.
+        range: boolean
+
+  ProjectPaths:
+    description: Where the model sources and the document live. Paths only (I6).
+    annotations:
+      owner: slarti.settings
+    attributes:
+      arch:
+        description: The LikeC4 sources directory.
+      schema_dir:
+        description: The LinkML schema directory.
+      shapes:
+        description: The hand-written SHACL directory.
+      constraints:
+        description: The constraint registry file.
+      data_valid:
+        description: Fixtures that must pass.
+      data_invalid:
+        description: One fixture per rule, each of which must fail.
+      document:
+        description: The architecture document.
+      diagrams:
+        description: The generated diagram directory.
+      build:
+        description: Transient output; gitignored.

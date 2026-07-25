@@ -1,0 +1,36 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix slarti: <https://dsummersl.github.io/slarti/> .
+
+slarti:FindingCarriesRemedy
+  a sh:NodeShape ;
+  sh:targetClass slarti:Finding ;
+  sh:property [
+    sh:path slarti:remedy ;
+    sh:minCount 1 ;
+    sh:minLength 1 ;
+    sh:message "Every finding must carry a remedy sentence (I11)." ;
+  ] ;
+  sh:property [
+    sh:path slarti:id ;
+    sh:minCount 1 ;
+    sh:pattern "^(OWN|REG|DOC|ENV)-[0-9]+$" ;
+    sh:message "Every finding must carry a stable rule ID (I11)." ;
+  ] .
+
+slarti:UnenforcedConstraintGivesReason
+  a sh:NodeShape ;
+  sh:targetClass slarti:Constraint ;
+  sh:or (
+    [ sh:property [ sh:path slarti:enforced_by ; sh:minCount 1 ] ]
+    [ sh:property [ sh:path slarti:reason ; sh:minCount 1 ; sh:minLength 1 ] ]
+  ) ;
+  sh:message "A constraint with no enforcer must give a reason (REG-3)." .
+
+slarti:EnforcerNamesWhatItIs
+  a sh:NodeShape ;
+  sh:targetClass slarti:Enforcer ;
+  sh:property [
+    sh:path slarti:ref ;
+    sh:minCount 1 ;
+    sh:message "An enforcer must name the thing that enforces the rule." ;
+  ] .

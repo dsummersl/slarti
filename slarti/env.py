@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+import re
+import shutil
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from slarti import proc
+from slarti.findings import Finding
+
+VERSION_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
+
+Version = tuple[int, int, int]
+
+
+@dataclass(frozen=True)
+class Requirement:
+    """A supported version range for one delegated tool."""
+
+    tool: str
+    floor: Version
+    ceiling: Version | None
+    argv: list[str]
+    upgrade: str
+
+
+REQUIREMENTS: list[Requirement] = [
+    Requirement("node", (20, 0, 0), None, ["node", "--version"], "install Node >= 20"),
+    Requirement(
+        "likec4",
+        (1, 59, 0),
+        (2, 0, 0),
+        proc.likec4(["--version"]),
+        "npm install likec4@^1.59",
+    ),
+    Requirement(
+        "linkml",
+        (1, 11, 0),
+        (2, 0, 0),
+        ["linkml", "--version"],
+        "uv pip install 'linkml>=1.11,<2'",
+    ),
+]
+
+
+@dataclass(frozen=True)
+class Probe:
+    """The observed state of one delegated tool."""
+
+    tool: str
+    version: Version | None
+    location: str | None
+    detail: str
+    ok: bool
+
+    @property
+    def version_text(self) -> str:
+        return "not found" if self.version is None else ".".join(str(p) for p in self.version)
+
+
+def parse_version(text: str) -> Version | None:
+    match = VERSION_RE.search(text)
+    if match is None:
+        return None
+    major, minor, patch = match.group(1), match.group(2), match.group(3)
+    return (int(major), int(minor), int(patch or 0))
+
+
+def range_text(req: Requirement) -> str:
+    floor = ".".join(str(p) for p in req.floor)
+    if req.ceiling is None:
+        return f">={floor}"
+    return f">={floor},<{req.ceiling[0]}"
+
+
+def _locate(req: Requirement) -> str | None:
+    binary = req.argv[0]
+    if binary == "npx":
+        return f"npx --no-install {req.argv[2]}"
+    return shutil.which(binary)
+
+
+def probe(req: Requirement, cwd: Path | None = None) -> Probe:
+    """Probe one tool for its version and check it against the supported range."""
+    try:
+        result = proc.run(req.argv, cwd=cwd)
+    except proc.ToolMissing:
+        return Probe(req.tool, None, None, f"{req.argv[0]} not found on PATH", False)
+    version = parse_version(result.stdout) or parse_version(result.stderr)
+    if version is None:
+        return Probe(req.tool, None, _locate(req), "version could not be determined", False)
+    return _classify(req, version)
+
+
+def _in_range(req: Requirement, version: Version) -> bool:
+    return version >= req.floor and (req.ceiling is None or version < req.ceiling)
+
+
+def _classify(req: Requirement, version: Version) -> Probe:
+    if _in_range(req, version):
+        return Probe(req.tool, version, _locate(req), f"within {range_text(req)}", True)
+    detail = f"requires {range_text(req)}; upgrade with: {req.upgrade}"
+    return Probe(req.tool, version, _locate(req), detail, False)
+
+
+def probe_python() -> Probe:
+    version = sys.version_info[:3]
+    ok = (3, 11, 0) <= version < (4, 0, 0)
+    detail = "within >=3.11,<4" if ok else "requires >=3.11,<4"
+    return Probe("python", version, sys.executable, detail, ok)
+
+
+def probe_all(cwd: Path | None = None) -> list[Probe]:
+    """Probe every delegated tool once. Cached in-process only by the caller (I4)."""
+    return [probe_python(), *(probe(req, cwd) for req in REQUIREMENTS)]
+
+
+def env_findings(probes: list[Probe]) -> list[Finding]:
+    """Turn failed probes into ENV-1 findings."""
+    return [
+        Finding(
+            id="ENV-1",
+            severity="error",
+            file="-",
+            subject=p.tool,
+            message=f"{p.tool} {p.version_text} is unusable: {p.detail}.",
+            remedy=f"Install a {p.tool} version that satisfies the supported range, then re-run.",
+        )
+        for p in probes
+        if not p.ok
+    ]

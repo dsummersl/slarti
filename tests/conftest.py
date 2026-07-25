@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from slarti.config import DEFAULTS, Config
+from slarti.models import Element, Likec4Model, Models, Relation
+
+SCHEMA = """id: https://example.org/example
+name: example
+prefixes:
+  example: https://example.org/example/
+  linkml: https://w3id.org/linkml/
+default_prefix: example
+default_range: string
+imports:
+  - linkml:types
+classes:
+  Task:
+    annotations:
+      owner: todo.api
+    attributes:
+      id:
+        identifier: true
+      list:
+"""
+
+
+def make_config(root: Path) -> Config:
+    for key in ("arch", "schema", "shapes", "data_valid", "data_invalid", "diagrams"):
+        (root / DEFAULTS[key]).mkdir(parents=True, exist_ok=True)
+    (root / "docs").mkdir(parents=True, exist_ok=True)
+    return Config(root=root, paths=dict(DEFAULTS))
+
+
+def make_model(owns: tuple[str, ...] = ("Task",)) -> Likec4Model:
+    elements = {
+        "todo": Element("todo", "Todo", "system", ()),
+        "todo.api": Element("todo.api", "API", "container", owns),
+        "todo.db": Element("todo.db", "DB", "container", ()),
+    }
+    relations = (Relation("todo.api", "todo.db", "reads"),)
+    return Likec4Model(elements=elements, relations=relations, views=("index",))
+
+
+def make_models(root: Path, schema: str = SCHEMA, owns: tuple[str, ...] = ("Task",)) -> Models:
+    config = make_config(root)
+    (config.path("schema") / "example.yaml").write_text(schema, encoding="utf-8")
+    return Models(config=config, _likec4=make_model(owns))
+
+
+@pytest.fixture
+def models(tmp_path: Path) -> Models:
+    return make_models(tmp_path)
+
+
+@pytest.fixture
+def config(tmp_path: Path) -> Config:
+    return make_config(tmp_path)

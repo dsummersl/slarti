@@ -1,0 +1,8 @@
+{
+  "name": "slarti-workspace",
+  "private": true,
+  "description": "The user's pinned LikeC4. slarti invokes it via npx --no-install and never installs anything.",
+  "devDependencies": {
+    "likec4": "^1.59.2"
+  }
+}

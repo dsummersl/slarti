@@ -1,0 +1,17 @@
+# A well-formed finding and a well-formed constraint: nothing should fire.
+@prefix slarti: <https://dsummersl.github.io/slarti/> .
+
+<https://dsummersl.github.io/slarti/data/good-finding>
+  a slarti:Finding ;
+  slarti:id "REG-2" ;
+  slarti:severity "error" ;
+  slarti:file "model/shapes/invariants.ttl" ;
+  slarti:subject "slarti:FindingCarriesRemedy" ;
+  slarti:message "SHACL shape is enforced but no constraint references it." ;
+  slarti:remedy "Add a constraint with enforced_by.kind=shacl_shape, or delete the shape." .
+
+<https://dsummersl.github.io/slarti/data/good-constraint>
+  a slarti:Constraint ;
+  slarti:id "U1" ;
+  slarti:statement "slarti never modifies a user-authored file." ;
+  slarti:reason "Verified by a hashing test, not by a shape." .
