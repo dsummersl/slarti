@@ -6,14 +6,15 @@ from pathlib import Path
 from typing import Any
 
 CONFIG_NAME = "slarti.toml"
+PYPROJECT_NAME = "pyproject.toml"
 
 DEFAULTS: dict[str, str] = {
-    "arch": "model/arch",
-    "schema": "model/schema",
-    "shapes": "model/shapes",
-    "constraints": "model/constraints.yaml",
-    "data_valid": "model/data/valid",
-    "data_invalid": "model/data/invalid",
+    "arch": "docs/models/arch",
+    "schema": "docs/models/schema",
+    "shapes": "docs/models/shapes",
+    "constraints": "docs/models/constraints.yaml",
+    "data_valid": "docs/models/data/valid",
+    "data_invalid": "docs/models/data/invalid",
     "document": "docs/architecture.md",
     "diagrams": "docs/diagrams",
     "build": "build",
@@ -55,15 +56,49 @@ def find_root(start: Path) -> Path | None:
     return None
 
 
-def load(start: Path | None = None) -> Config:
-    root = find_root(start or Path.cwd())
-    if root is None:
-        raise ConfigError(f"No {CONFIG_NAME} found. Run 'slarti init' first.")
-    raw: dict[str, Any] = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
-    paths = dict(DEFAULTS)
+def _merge(raw: dict[str, Any], source_label: str) -> dict[str, str]:
     configured = raw.get("paths", {})
     unknown = sorted(set(configured) - set(DEFAULTS))
     if unknown:
-        raise ConfigError(f"Unknown path keys in {CONFIG_NAME}: {', '.join(unknown)}")
+        raise ConfigError(f"Unknown path keys in {source_label}: {', '.join(unknown)}")
+    paths = dict(DEFAULTS)
     paths.update({k: str(v) for k, v in configured.items()})
+    return paths
+
+
+def _find_pyproject_root(start: Path) -> Path | None:
+    for candidate in [start, *start.parents]:
+        pyproject = candidate / PYPROJECT_NAME
+        if pyproject.is_file():
+            raw = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+            if "paths" in raw.get("tool", {}).get("slarti", {}):
+                return candidate
+    return None
+
+
+def _load_toml(root: Path, name: str, source_label: str) -> Config:
+    raw: dict[str, Any] = tomllib.loads((root / name).read_text(encoding="utf-8"))
+    return Config(root=root, paths=_merge(raw, source_label))
+
+
+def _load_pyproject(root: Path) -> Config:
+    raw: dict[str, Any] = tomllib.loads((root / PYPROJECT_NAME).read_text(encoding="utf-8"))
+    paths = _merge(raw["tool"]["slarti"], f"{PYPROJECT_NAME} [tool.slarti]")
     return Config(root=root, paths=paths)
+
+
+def load(start: Path | None = None) -> Config:
+    start = (start or Path.cwd()).resolve()
+
+    root = find_root(start)
+    if root is not None:
+        return _load_toml(root, CONFIG_NAME, CONFIG_NAME)
+
+    root = _find_pyproject_root(start)
+    if root is not None:
+        return _load_pyproject(root)
+
+    raise ConfigError(
+        f"No {CONFIG_NAME} or [tool.slarti] section in {PYPROJECT_NAME} found. "
+        f"Run 'slarti init' first."
+    )

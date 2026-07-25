@@ -1,16 +1,21 @@
 # slarti
 
+[![Slartibartfast](https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559)](https://en.wikipedia.org/wiki/Slartibartfast), the curmudgeonly architect of Norway's fjords from *The Hitchhiker's Guide to the Galaxy*, is the namesake of this tool.
+
 A coordination CLI for validated architecture documentation.
 
 Architecture documents drift, and the drift is invisible: a stale diagram looks
 exactly like a fresh one, and an unenforced rule in prose reads exactly like an
 enforced one.
 
-[LikeC4](https://likec4.dev) validates structure and generates diagrams.
-[LinkML](https://linkml.io) validates entities and generates schemas and
-projections. Neither can see the other, and neither can see the prose document
-that claims what they enforce. `slarti` coordinates them — it does not wrap,
-hide or replace any part of either. It owns exactly the joins nobody else holds:
+- [LikeC4](https://likec4.dev) validates structure and generates diagrams.
+- [LinkML](https://linkml.io) validates entities and generates schemas and projections. Neither can see the other, and neither can see the prose document that claims what they enforce.
+- [pyshacl](https://github.com/rdflib/pyshacl) validates instances against [SHACL](https://www.w3.org/TR/shacl/) graphs (which LinkML generates). It can validate rules about how your system behaves across the graph.
+
+`slarti` coordinates these three tools, and provides a single tool to verify consistency across all three kinds of artifacts.
+
+It owns exactly the joins nobody else holds:
+
 
 | Join | What goes wrong without it |
 |------|----------------------------|
@@ -45,9 +50,9 @@ seam, and the diagrams injected into `docs/architecture.md`.
 ```c4
 // model/arch/todo.c4
 web = container 'Web UI' {
-  metadata {
-    owns 'Task, TaskList'        // ← the seam: names LinkML classes
-  }
+metadata {
+  owns 'Task, TaskList'        // ← the seam: names LinkML classes
+}
 }
 ```
 
@@ -63,12 +68,12 @@ the entity half of the ownership seam, and converting YAML fixtures to RDF.
 ```yaml
 # model/schema/todo.yaml
 classes:
-  Task:
-    annotations:
-      owner: todo.web            # ← the seam: names a LikeC4 container
-    attributes:
-      list:
-        required: true
+Task:
+  annotations:
+    owner: todo.web            # ← the seam: names a LikeC4 container
+  attributes:
+    list:
+      required: true
 ```
 
 ### pyshacl — instances
@@ -84,7 +89,7 @@ finding instead of a green build.
 ```turtle
 # model/shapes/invariants.ttl
 todo:SubtaskSharesListWithParent a sh:NodeShape ;
-  sh:targetClass todo:Task ; ... .
+sh:targetClass todo:Task ; ... .
 ```
 
 ### Each tool, used for what it is good for
@@ -112,16 +117,16 @@ One slot, four target languages. This entity —
 
 ```yaml
 # model/schema/slarti.yaml
-  Finding:
-    attributes:
-      id:
-        description: A stable check ID such as OWN-1; retired IDs are never reused.
-        required: true
-      severity:
-        range: Severity        # an enum: error | warning
-        required: true
-      line:
-        range: integer         # optional: not every finding can be located
+Finding:
+  attributes:
+    id:
+      description: A stable check ID such as OWN-1; retired IDs are never reused.
+      required: true
+    severity:
+      range: Severity        # an enum: error | warning
+      required: true
+    line:
+      range: integer         # optional: not every finding can be located
 ```
 
 — becomes a Python interface, a TypeScript type and a JSON Schema without being
@@ -130,9 +135,9 @@ written three times:
 ```python
 # slarti/domain.py — gen-pydantic
 class Finding(ConfiguredBaseModel):
-    id: str = Field(default=...)
-    severity: Severity = Field(default=...)
-    line: Optional[int] = Field(default=None)
+  id: str = Field(default=...)
+  severity: Severity = Field(default=...)
+  line: Optional[int] = Field(default=None)
 ```
 
 ```typescript
@@ -144,8 +149,8 @@ export interface Finding { id: string, severity: Severity, line?: number }
 ```json
 // gen-json-schema — feed it to ajv, or to json-schema-to-zod for a zod schema
 { "properties": { "severity": { "$ref": "#/$defs/Severity" },
-                  "line": { "type": ["integer", "null"] } },
-  "required": ["id", "severity", "file", "subject", "message", "remedy"] }
+                "line": { "type": ["integer", "null"] } },
+"required": ["id", "severity", "file", "subject", "message", "remedy"] }
 ```
 
 **`slarti` eats its own here.** `slarti/domain.py` above is not an illustration:
@@ -197,29 +202,29 @@ One rule, `D8 — a subtask belongs to the same list as its parent`, touches all
 ```yaml
 # model/constraints.yaml
 - id: D8
-  statement: A subtask belongs to the same list as its parent.
-  enforced_by:
-    layer: 3
-    kind: shacl_shape
-    ref: "todo:SubtaskSharesListWithParent"
-    fixture: model/data/invalid/D8.yaml
-    fixture_class: Task
+statement: A subtask belongs to the same list as its parent.
+enforced_by:
+  layer: 3
+  kind: shacl_shape
+  ref: "todo:SubtaskSharesListWithParent"
+  fixture: model/data/invalid/D8.yaml
+  fixture_class: Task
 ```
 
 Running `slarti check` walks the seams in order:
 
 1. **LikeC4 ↔ LinkML.** `todo.web` claims `Task`; `Task` names `todo.web` as its
-   owner. Delete either side and you get `OWN-3` or `OWN-4` — neither tool alone
-   would have noticed.
+  owner. Delete either side and you get `OWN-3` or `OWN-4` — neither tool alone
+  would have noticed.
 2. **Registry ↔ models.** `todo:SubtaskSharesListWithParent` must exist in the
-   merged shapes graph, or `D8` is a `REG-1` finding: the document would otherwise
-   still claim the rule is enforced.
+  merged shapes graph, or `D8` is a `REG-1` finding: the document would otherwise
+  still claim the rule is enforced.
 3. **Registry ↔ data.** `model/data/invalid/D8.yaml` is converted by LinkML and run
-   through pyshacl. It must fail (`REG-6`) *and* the report must name
-   `todo:SubtaskSharesListWithParent` (`REG-7`).
+  through pyshacl. It must fail (`REG-6`) *and* the report must name
+  `todo:SubtaskSharesListWithParent` (`REG-7`).
 4. **Document ↔ everything.** `slarti docs --check` regenerates the constraints
-   table and fails if the committed `docs/architecture.md` no longer matches
-   (`DOC-1`).
+  table and fails if the committed `docs/architecture.md` no longer matches
+  (`DOC-1`).
 
 Each tool decided only what it can see. `slarti` decided nothing about tasks, lists
 or diagrams — only that the three answers still refer to the same thing.
@@ -252,15 +257,15 @@ Exit codes: `0` clean · `1` findings · `2` environment or usage error.
 ```
 slarti.toml            paths only; no settings mirrored from other tools
 model/
-  arch/*.c4            user-authored — LikeC4
-  schema/*.yaml        user-authored — LinkML
-  shapes/*.ttl         user-authored — hand-written SHACL
-  constraints.yaml     user-authored — the rule registry
-  data/valid/*         fixtures that must pass
-  data/invalid/*       one fixture per rule; each must fail, naming its rule
+arch/*.c4            user-authored — LikeC4
+schema/*.yaml        user-authored — LinkML
+shapes/*.ttl         user-authored — hand-written SHACL
+constraints.yaml     user-authored — the rule registry
+data/valid/*         fixtures that must pass
+data/invalid/*       one fixture per rule; each must fail, naming its rule
 docs/
-  architecture.md      user-authored prose + generated regions
-  diagrams/            GENERATED — never hand-edited
+architecture.md      user-authored prose + generated regions
+diagrams/            GENERATED — never hand-edited
 ```
 
 ## The constraint registry
@@ -269,17 +274,17 @@ docs/
 
 ```yaml
 constraints:
-  - id: D2
-    statement: A task belongs to exactly one list.
-    enforced_by:
-      layer: 2
-      kind: linkml_slot
-      ref: "Task.list"
+- id: D2
+  statement: A task belongs to exactly one list.
+  enforced_by:
+    layer: 2
+    kind: linkml_slot
+    ref: "Task.list"
 
-  - id: U1
-    statement: The API checks membership before every list access.
-    enforced_by: none
-    reason: Layer 1 can assert the relationship exists, not that every code path uses it.
+- id: U1
+  statement: The API checks membership before every list access.
+  enforced_by: none
+  reason: Layer 1 can assert the relationship exists, not that every code path uses it.
 ```
 
 Every rule points at an enforcer `slarti` resolves against the real models, or
@@ -290,11 +295,11 @@ Enforcer kinds: `shacl_shape`, `linkml_slot`, `linkml_class`, `likec4_relation`,
 ## Checks
 
 - `OWN-1..5` — the ownership seam between LinkML classes and LikeC4 containers,
-  checked in both directions.
+checked in both directions.
 - `REG-1..7` — the registry seam: dangling enforcers, orphaned shapes, missing
-  reasons, duplicate IDs, and per-rule negative fixtures that must actually fire.
+reasons, duplicate IDs, and per-rule negative fixtures that must actually fire.
 - `DOC-1..4` — the document seam: stale regions, hand-edited diagrams, broken
-  markers, and rules with no row in the tables.
+markers, and rules with no row in the tables.
 - `ENV-1` — a delegated tool missing or outside its supported version range.
 
 Supported ranges: LikeC4 `>=1.59,<2`, LinkML `>=1.11,<2`, Node `>=20`,

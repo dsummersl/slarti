@@ -17,7 +17,7 @@ from slarti import findings, registry
 from slarti.domain import Constraint, Enforcer, Finding, Severity
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "model/schema/slarti.yaml"  # relative: gen-pydantic records the path it was given
+SCHEMA = "docs/models/schema/slarti.yaml"  # relative: gen-pydantic records the path it was given
 GENERATED = ROOT / "slarti" / "domain.py"
 
 
@@ -42,7 +42,7 @@ def test_a_report_serialises_to_the_shape_the_schema_declares() -> None:
         Finding(
             id="OWN-1",
             severity=Severity.error,
-            file="model/schema/slarti.yaml",
+            file="docs/models/schema/slarti.yaml",
             subject="Task",
             message="class 'Task' has no owner.",
             remedy="Add an owner annotation.",
