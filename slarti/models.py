@@ -13,29 +13,11 @@ from rdflib.term import URIRef
 
 from slarti import proc
 from slarti.config import Config
+from slarti.domain import Element, Relation
 
 
 class ModelError(Exception):
     """Raised when a delegated tool cannot produce a model dump."""
-
-
-@dataclass(frozen=True)
-class Element:
-    """A LikeC4 element and the entities it claims to own."""
-
-    id: str
-    title: str
-    kind: str
-    owns: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class Relation:
-    """A LikeC4 relation between two elements."""
-
-    source: str
-    target: str
-    title: str
 
 
 @dataclass(frozen=True)
@@ -50,12 +32,12 @@ class Likec4Model:
         return any(r.source == source and r.target == target for r in self.relations)
 
     def owners_of(self, entity: str) -> list[str]:
-        return sorted(e.id for e in self.elements.values() if entity in e.owns)
+        return sorted(e.id for e in self.elements.values() if entity in (e.owns or []))
 
 
-def _parse_owns(metadata: dict[str, str]) -> tuple[str, ...]:
+def _parse_owns(metadata: dict[str, str]) -> list[str]:
     raw = metadata.get("owns", "")
-    return tuple(sorted(part.strip() for part in raw.split(",") if part.strip()))
+    return sorted(part.strip() for part in raw.split(",") if part.strip())
 
 
 def _element(raw: dict[str, object]) -> Element:

@@ -19,7 +19,7 @@ DOCUMENT = """# Doc
 CONSTRAINT = Constraint(
     id="D1",
     statement="A task belongs to exactly one list.",
-    enforcer=Enforcer(2, "linkml_slot", "Task.list", None, None),
+    enforced_by=Enforcer(layer=2, kind="linkml_slot", ref="Task.list"),
     reason=None,
     decision=None,
 )

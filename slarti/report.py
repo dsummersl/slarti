@@ -7,7 +7,7 @@ from typing import Any
 from slarti import __version__, resolvers
 from slarti.checks import ownership as ownership_checks
 from slarti.models import Models
-from slarti.registry import Constraint
+from slarti.registry import Constraint, is_unenforced, kind_text
 
 CHECKS: dict[str, str] = {
     "OWN-1": (
@@ -114,11 +114,11 @@ class Rule:
 
     @property
     def enforced(self) -> bool:
-        return not self.constraint.enforcer.is_none
+        return not is_unenforced(self.constraint.enforced_by)
 
     def as_dict(self) -> dict[str, Any]:
         c = self.constraint
-        e = c.enforcer
+        e = c.enforced_by
         return {
             "id": c.id,
             "statement": c.statement,
@@ -233,10 +233,10 @@ class Report:
 def _enforced_lines(rules: list[Rule]) -> list[str]:
     lines = []
     for rule in rules:
-        enforcer = resolvers.describe(rule.constraint.enforcer)
+        enforcer = resolvers.describe(rule.constraint.enforced_by)
         mark = "" if rule.resolves else "  (UNRESOLVED)"
         lines.append(f"  {rule.constraint.id}  {rule.constraint.statement}")
-        lines.append(f"      <- {rule.constraint.enforcer.kind} {enforcer}{mark}")
+        lines.append(f"      <- {kind_text(rule.constraint.enforced_by)} {enforcer}{mark}")
     return lines
 
 
@@ -254,7 +254,7 @@ def _shapes(models: Models, constraints: list[Constraint]) -> list[Shape]:
         referenced_by = sorted(
             c.id
             for c in constraints
-            if c.enforcer.kind == "shacl_shape" and c.enforcer.ref == curie
+            if c.enforced_by.kind == "shacl_shape" and c.enforced_by.ref == curie
         )
         shapes.append(
             Shape(curie=curie, file=models.config.rel(path), referenced_by=referenced_by)
@@ -275,7 +275,7 @@ def _ownership(models: Models) -> list[Owned]:
 
 def _elements(models: Models) -> list[dict[str, Any]]:
     return [
-        {"id": e.id, "title": e.title, "kind": e.kind, "owns": list(e.owns)}
+        {"id": e.id, "title": e.title, "kind": e.kind, "owns": list(e.owns or [])}
         for e in models.likec4.elements.values()
     ]
 
@@ -284,7 +284,7 @@ def build(models: Models, constraints: list[Constraint]) -> Report:
     """Resolve every seam into one report."""
     ordered = sorted(constraints, key=lambda c: c.id)
     return Report(
-        rules=[Rule(c, resolvers.resolve(models, c.enforcer)) for c in ordered],
+        rules=[Rule(c, resolvers.resolve(models, c.enforced_by)) for c in ordered],
         shapes=_shapes(models, ordered),
         ownership=_ownership(models),
         elements=_elements(models),

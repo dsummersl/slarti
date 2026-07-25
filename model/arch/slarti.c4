@@ -30,7 +30,7 @@ model {
     findings = container 'Findings' {
       description 'Stable rule IDs, remedies and the JSON report shape.'
       metadata {
-        owns 'Finding, Report'
+        owns 'Finding, Report, Summary'
       }
     }
 

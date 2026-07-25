@@ -30,7 +30,7 @@ def test_missing_tool_is_reported(monkeypatch) -> None:
     monkeypatch.setattr(proc, "run", missing)
     probe = env.probe(LIKEC4)
     assert not probe.ok
-    assert probe.version_text == "not found"
+    assert probe.version == "not found"
 
 
 def test_out_of_range_names_the_range_and_the_upgrade(monkeypatch) -> None:

@@ -39,7 +39,7 @@ todo:UniqueMembership
 def test_export_payload_is_parsed_and_sorted() -> None:
     model = models_module.parse_likec4(PAYLOAD)
     assert list(model.elements) == ["todo", "todo.db"]
-    assert model.elements["todo.db"].owns == ("Task", "TodoList")
+    assert model.elements["todo.db"].owns == ["Task", "TodoList"]
     assert model.has_relation("todo", "todo.db")
     assert not model.has_relation("todo.db", "todo")
     assert model.views == ("index",)

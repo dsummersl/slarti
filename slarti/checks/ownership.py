@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from slarti.findings import Finding
+from slarti.findings import Finding, Severity
 from slarti.models import Likec4Model, Models
 
 OWNER_ANNOTATION = "owner"
@@ -18,7 +18,7 @@ def owned_classes(models: Models) -> list[str]:
 def _missing_owner(name: str, schema_file: str) -> Finding:
     return Finding(
         id="OWN-1",
-        severity="error",
+        severity=Severity.error,
         file=schema_file,
         subject=name,
         message=f"class '{name}' has no owner.",
@@ -32,7 +32,7 @@ def _missing_owner(name: str, schema_file: str) -> Finding:
 def _unknown_owner(name: str, owner: str, schema_file: str) -> Finding:
     return Finding(
         id="OWN-2",
-        severity="error",
+        severity=Severity.error,
         file=schema_file,
         subject=name,
         message=f"class '{name}' names owner '{owner}', which is not an element in the model.",
@@ -43,7 +43,7 @@ def _unknown_owner(name: str, owner: str, schema_file: str) -> Finding:
 def _unclaimed(name: str, owner: str, schema_file: str) -> Finding:
     return Finding(
         id="OWN-3",
-        severity="error",
+        severity=Severity.error,
         file=schema_file,
         subject=name,
         message=f"class '{name}' names owner '{owner}', but '{owner}' does not claim it.",
@@ -73,7 +73,7 @@ def _element_findings(models: Models, model: Likec4Model, arch_dir: str) -> list
                 findings.append(
                     Finding(
                         id="OWN-4",
-                        severity="error",
+                        severity=Severity.error,
                         file=arch_dir,
                         subject=element.id,
                         message=(
@@ -97,7 +97,7 @@ def _double_claim_findings(models: Models, model: Likec4Model, arch_dir: str) ->
             findings.append(
                 Finding(
                     id="OWN-5",
-                    severity="error",
+                    severity=Severity.error,
                     file=arch_dir,
                     subject=name,
                     message=(

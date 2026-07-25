@@ -1,46 +1,23 @@
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field
-from typing import Any, Literal
-
 from slarti import __version__
+from slarti.domain import Finding, Severity, Summary
+from slarti.domain import Report as ReportSchema
 
-Severity = Literal["error", "warning"]
-
-
-@dataclass(frozen=True)
-class Finding:
-    """A single machine-readable check result."""
-
-    id: str
-    severity: Severity
-    file: str
-    subject: str
-    message: str
-    remedy: str
-    line: int | None = None
-
-    def as_dict(self) -> dict[str, Any]:
-        data: dict[str, Any] = {
-            "id": self.id,
-            "severity": self.severity,
-            "file": self.file,
-            "subject": self.subject,
-            "message": self.message,
-            "remedy": self.remedy,
-        }
-        if self.line is not None:
-            data["line"] = self.line
-        return data
+__all__ = ["Finding", "Report", "Severity"]
 
 
-@dataclass
 class Report:
-    """A run's findings plus the count of checks performed."""
+    """A run's findings plus the count of checks performed.
 
-    findings: list[Finding] = field(default_factory=list)
-    checked: int = 0
+    The accumulator is hand-written; the shape it serialises to is not. `as_schema`
+    builds the LinkML-generated `Report`, so the JSON a caller parses is exactly the
+    shape `model/schema/slarti.yaml` declares.
+    """
+
+    def __init__(self, findings: list[Finding] | None = None, checked: int = 0) -> None:
+        self.findings: list[Finding] = list(findings or [])
+        self.checked = checked
 
     def add(self, finding: Finding) -> None:
         self.findings.append(finding)
@@ -50,26 +27,25 @@ class Report:
 
     @property
     def errors(self) -> int:
-        return sum(1 for f in self.findings if f.severity == "error")
+        return sum(1 for f in self.findings if f.severity == Severity.error)
 
     @property
     def warnings(self) -> int:
-        return sum(1 for f in self.findings if f.severity == "warning")
+        return sum(1 for f in self.findings if f.severity == Severity.warning)
 
     def sorted_findings(self) -> list[Finding]:
         return sorted(self.findings, key=lambda f: (f.id, f.file, f.subject))
 
+    def as_schema(self) -> ReportSchema:
+        """The run as the generated `Report`, validated on construction."""
+        return ReportSchema(
+            seam_version=__version__,
+            findings=self.sorted_findings(),
+            summary=Summary(errors=self.errors, warnings=self.warnings, checked=self.checked),
+        )
+
     def as_json(self) -> str:
-        payload = {
-            "seam_version": __version__,
-            "findings": [f.as_dict() for f in self.sorted_findings()],
-            "summary": {
-                "errors": self.errors,
-                "warnings": self.warnings,
-                "checked": self.checked,
-            },
-        }
-        return json.dumps(payload, indent=2, sort_keys=False)
+        return self.as_schema().model_dump_json(indent=2, exclude_none=True)
 
     def as_text(self) -> str:
         if not self.findings:

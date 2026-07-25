@@ -5,24 +5,24 @@ from pathlib import Path
 
 from slarti import fixtures, resolvers
 from slarti.config import Config
-from slarti.findings import Finding
+from slarti.findings import Finding, Severity
 from slarti.models import Models, shape_line
-from slarti.registry import Constraint, referenced_shapes
+from slarti.registry import Constraint, is_unenforced, kind_text, referenced_shapes
 
 
 def _reg1(config: Config, c: Constraint) -> Finding:
     return Finding(
         id="REG-1",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["constraints"],
         subject=c.id,
         line=c.line,
         message=(
-            f"constraint {c.id} is enforced by {c.enforcer.kind} '{c.enforcer.ref}', "
+            f"constraint {c.id} is enforced by {kind_text(c.enforced_by)} '{c.enforced_by.ref}', "
             "which does not exist."
         ),
         remedy=(
-            f"Create the enforcer '{c.enforcer.ref}', correct the reference, "
+            f"Create the enforcer '{c.enforced_by.ref}', correct the reference, "
             f"or record {c.id} as 'enforced_by: none' with a reason."
         ),
     )
@@ -31,7 +31,7 @@ def _reg1(config: Config, c: Constraint) -> Finding:
 def _reg3(config: Config, c: Constraint) -> Finding:
     return Finding(
         id="REG-3",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["constraints"],
         subject=c.id,
         line=c.line,
@@ -43,7 +43,7 @@ def _reg3(config: Config, c: Constraint) -> Finding:
 def _reg4(config: Config, constraint_id: str) -> Finding:
     return Finding(
         id="REG-4",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["constraints"],
         subject=constraint_id,
         message=f"constraint ID {constraint_id} is declared more than once.",
@@ -54,7 +54,7 @@ def _reg4(config: Config, constraint_id: str) -> Finding:
 def _reg5(config: Config, c: Constraint) -> Finding:
     return Finding(
         id="REG-5",
-        severity="error",
+        severity=Severity.error,
         file=config.paths["constraints"],
         subject=c.id,
         line=c.line,
@@ -79,9 +79,9 @@ def _duplicate_findings(config: Config, constraints: list[Constraint]) -> list[F
 
 
 def _one_constraint(config: Config, models: Models, c: Constraint) -> list[Finding]:
-    if c.enforcer.is_none:
+    if is_unenforced(c.enforced_by):
         return [] if c.reason else [_reg3(config, c)]
-    return [] if resolvers.resolve(models, c.enforcer) else [_reg1(config, c)]
+    return [] if resolvers.resolve(models, c.enforced_by) else [_reg1(config, c)]
 
 
 def _decision_findings(config: Config, constraints: list[Constraint]) -> list[Finding]:
@@ -104,7 +104,7 @@ def _orphan_shapes(config: Config, models: Models, constraints: list[Constraint]
 def _reg2(config: Config, curie: str, path: Path) -> Finding:
     return Finding(
         id="REG-2",
-        severity="error",
+        severity=Severity.error,
         file=config.rel(path),
         subject=curie,
         line=shape_line(path, curie),
@@ -121,7 +121,7 @@ def _reg2(config: Config, curie: str, path: Path) -> Finding:
 def _reg6(config: Config, c: Constraint, message: str, remedy: str, path: Path) -> Finding:
     return Finding(
         id="REG-6",
-        severity="error",
+        severity=Severity.error,
         file=config.rel(path),
         subject=c.id,
         message=message,
@@ -130,18 +130,19 @@ def _reg6(config: Config, c: Constraint, message: str, remedy: str, path: Path) 
 
 
 def _fixture_findings(config: Config, c: Constraint) -> list[Finding]:
-    path = config.root / str(c.enforcer.fixture)
+    path = config.root / str(c.enforced_by.fixture)
     if not path.is_file():
         return [
             _reg6(
                 config,
                 c,
                 f"constraint {c.id} declares a fixture that does not exist.",
-                f"Create {c.enforcer.fixture} as a case that must violate '{c.enforcer.ref}'.",
+                f"Create {c.enforced_by.fixture} as a case that must violate "
+                f"'{c.enforced_by.ref}'.",
                 path,
             )
         ]
-    outcome = fixtures.validate(config, path, c.enforcer.fixture_class)
+    outcome = fixtures.validate(config, path, c.enforced_by.fixture_class)
     if outcome.error is not None:
         return [
             _reg6(
@@ -158,7 +159,7 @@ def _fixture_findings(config: Config, c: Constraint) -> list[Finding]:
                 config,
                 c,
                 f"the negative fixture for {c.id} conforms; the shape never fires.",
-                f"Change the fixture so it violates '{c.enforcer.ref}', or fix the shape.",
+                f"Change the fixture so it violates '{c.enforced_by.ref}', or fix the shape.",
                 path,
             )
         ]
@@ -166,22 +167,22 @@ def _fixture_findings(config: Config, c: Constraint) -> list[Finding]:
 
 
 def _names_shape(outcome: fixtures.Validation, c: Constraint) -> bool:
-    ref = c.enforcer.ref or ""
+    ref = c.enforced_by.ref or ""
     return ref in outcome.shapes or ref in outcome.report
 
 
 def _reg7(config: Config, c: Constraint, path: Path) -> Finding:
     return Finding(
         id="REG-7",
-        severity="error",
+        severity=Severity.error,
         file=config.rel(path),
         subject=c.id,
         message=(
             f"the fixture for {c.id} fails, but the violation report never names "
-            f"'{c.enforcer.ref}'."
+            f"'{c.enforced_by.ref}'."
         ),
         remedy=(
-            f"Narrow the fixture so the only violation reported is '{c.enforcer.ref}', "
+            f"Narrow the fixture so the only violation reported is '{c.enforced_by.ref}', "
             "or correct the declared ref."
         ),
     )
@@ -195,6 +196,6 @@ def check(config: Config, models: Models, constraints: list[Constraint]) -> list
         *_orphan_shapes(config, models, constraints),
     ]
     for c in constraints:
-        if c.enforcer.fixture:
+        if c.enforced_by.fixture:
             findings.extend(_fixture_findings(config, c))
     return findings

@@ -7,7 +7,7 @@ from slarti import proc, resolvers
 from slarti.checks.ownership import owned_classes
 from slarti.config import Config
 from slarti.models import Models
-from slarti.registry import Constraint
+from slarti.registry import Constraint, is_unenforced, kind_text
 
 DIAGRAM_PREFIX = "diagram:"
 TABLE_REGIONS = ("constraints", "unverified", "ownership")
@@ -31,12 +31,12 @@ def constraints_table(constraints: list[Constraint]) -> str:
         [
             c.id,
             c.statement,
-            str(c.enforcer.layer or "-"),
-            f"{c.enforcer.kind} {resolvers.describe(c.enforcer)}",
+            str(c.enforced_by.layer or "-"),
+            f"{kind_text(c.enforced_by)} {resolvers.describe(c.enforced_by)}",
             c.decision or "-",
         ]
         for c in sorted(constraints, key=lambda c: c.id)
-        if not c.enforcer.is_none
+        if not is_unenforced(c.enforced_by)
     ]
     return _table(["ID", "Rule", "Layer", "Enforced by", "Decision"], rows, "No enforced rules.")
 
@@ -46,7 +46,7 @@ def unverified_table(constraints: list[Constraint]) -> str:
     rows = [
         [c.id, c.statement, c.reason or "-"]
         for c in sorted(constraints, key=lambda c: c.id)
-        if c.enforcer.is_none
+        if is_unenforced(c.enforced_by)
     ]
     return _table(["ID", "Rule", "Why unenforced"], rows, "Every rule is enforced.")
 
@@ -57,7 +57,7 @@ def ownership_table(models: Models) -> str:
     rows = []
     for name in owned_classes(models):
         owner = models.class_annotation(name, "owner")
-        title = elements[owner].title if owner in elements else "-"
+        title = (elements[owner].title or "-") if owner in elements else "-"
         rows.append([name, f"`{owner}`" if owner else "-", title])
     return _table(["Entity", "Owner", "Owner title"], rows, "No entities are owned.")
 

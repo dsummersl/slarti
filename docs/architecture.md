@@ -217,6 +217,7 @@ a dangling pointer and an unclaimed target are different failures.
 | Region | `slarti.docsgen` | Document generator |
 | Relation | `slarti.models` | Model adapters |
 | Report | `slarti.findings` | Findings |
+| Summary | `slarti.findings` | Findings |
 
 <!-- slarti:end ownership -->
 
@@ -254,6 +255,7 @@ case, not a failure: each entry must say why enforcement is not possible.
 | U1 | slarti never modifies a user-authored file. | Layer 1 can say which container writes to the sources, not that the write touched only a generated region. Verified instead by a test that hashes every user-authored file before and after each command. |
 | U2 | Running a delegated tool directly produces the same result as running it via slarti. | No model can assert that a subprocess was passed through unaltered. Verified by a test asserting byte-identical diagnostics. |
 | U3 | Generation is idempotent — running slarti docs twice produces identical output. | Idempotence is a property of a run, not of the model. Verified by a test that hashes the tree across two runs. |
+| U4 | The Python interfaces the implementation uses are generated from the schema. | No model can assert that a module imports a generated projection rather than a copy of it. Verified instead by a test that regenerates slarti/domain.py from model/schema/slarti.yaml and fails if the committed file differs. |
 
 <!-- slarti:end unverified -->
 
@@ -267,6 +269,12 @@ case, not a failure: each entry must say why enforcement is not possible.
   findings render as text or as JSON. Entities in the registry and the schema are
   shaped around that contract, which is why `Finding`, `Constraint` and `Enforcer`
   are modelled entities with shapes over them.
+- **ADR-0003 — The Python interfaces are a LinkML projection.** See
+  `docs/adr/0003-python-interfaces-are-a-linkml-projection.md`. The domain classes
+  the implementation uses are generated from `model/schema/slarti.yaml` by
+  `gen-pydantic` into `slarti/domain.py` and committed; behaviour is hand-written
+  around them. Two definitions of one entity is the drift `slarti` exists to catch,
+  so the schema is the only one, and a stale projection fails the test suite.
 
 ## 10. Risks and technical debt
 
