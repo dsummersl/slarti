@@ -54,9 +54,7 @@ def replace(text: str, region: str, body: str) -> str:
         + re.escape(END.format(region=region)).replace(r"\ ", r"\s+"),
         re.DOTALL,
     )
-    replacement = "\n".join(
-        [BEGIN.format(region=region), "", body, "", END.format(region=region)]
-    )
+    replacement = "\n".join([BEGIN.format(region=region), "", body, "", END.format(region=region)])
     updated, count = pattern.subn(lambda _: replacement, text)
     if count == 0:
         raise MarkerError(f"No region named '{region}' in the document.")

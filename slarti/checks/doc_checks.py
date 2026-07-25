@@ -25,7 +25,7 @@ def _marker_findings(config: Config, unknown: tuple[str, ...]) -> list[Finding]:
             f"the document declares a generated region named '{name}', which slarti cannot fill.",
             name,
             "Use one of: constraints, unverified, ownership, diagram:<view>.",
-            )
+        )
         for name in unknown
     ]
 
@@ -59,8 +59,7 @@ def _doc4(config: Config, constraint_id: str) -> Finding:
         file=config.paths["document"],
         subject=constraint_id,
         message=(
-            f"constraint {constraint_id} is in the registry but has no row in the "
-            "document tables."
+            f"constraint {constraint_id} is in the registry but has no row in the document tables."
         ),
         remedy="This is a generation bug in slarti; please report it with the registry entry.",
     )

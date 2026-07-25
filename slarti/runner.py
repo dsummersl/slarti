@@ -66,6 +66,3 @@ def dangling(ctx: Context) -> Dangling:
         unenforced=[c for c in ordered if c.enforcer.is_none],
         orphaned=sorted(set(ctx.models.shapes) - referenced),
     )
-
-
-

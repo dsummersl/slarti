@@ -31,4 +31,3 @@ echo "$L"
 if [[ ${#CC} -gt 0 || ${#MI} -gt 0 || ${#L} -gt 0 ]]; then
   exit 1
 fi
-
