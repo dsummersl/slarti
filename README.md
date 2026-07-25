@@ -1,5 +1,8 @@
 # slarti
 
+[![Slartibartfast](https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559)](https://en.wikipedia.org/wiki/Slartibartfast)
+Slartibartfast: the curmudgeonly architect of Norway's fjords from *The Hitchhiker's Guide to the Galaxy*. The namesake of this tool.
+
 A coordination CLI that checks consistency between [LikeC4](https://likec4.dev) architecture
 diagrams, [LinkML](https://linkml.io) schemas, and [SHACL](https://www.w3.org/TR/shacl/) shapes.
 It also regenerates the diagrams in your architecture document so the prose never drifts.
