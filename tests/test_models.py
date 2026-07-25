@@ -7,13 +7,21 @@ from slarti.explain import CHECKS, explain
 
 PAYLOAD = {
     "elements": {
-        "todo.db": {"id": "todo.db", "title": "DB", "kind": "container",
-                    "metadata": {"owns": "Task, TodoList"}},
+        "todo.db": {
+            "id": "todo.db",
+            "title": "DB",
+            "kind": "container",
+            "metadata": {"owns": "Task, TodoList"},
+        },
         "todo": {"id": "todo", "title": "Todo", "kind": "system"},
     },
     "relations": {
-        "r1": {"id": "r1", "title": "reads", "source": {"model": "todo"},
-               "target": {"model": "todo.db"}},
+        "r1": {
+            "id": "r1",
+            "title": "reads",
+            "source": {"model": "todo"},
+            "target": {"model": "todo.db"},
+        },
     },
     "views": {"index": {}},
 }

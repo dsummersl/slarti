@@ -12,9 +12,7 @@ def owned_classes(models: Models) -> list[str]:
     if view is None:
         return []
     classes = view.all_classes(imports=False)
-    return sorted(
-        name for name, cls in classes.items() if not (cls.abstract or cls.mixin)
-    )
+    return sorted(name for name, cls in classes.items() if not (cls.abstract or cls.mixin))
 
 
 def _missing_owner(name: str, schema_file: str) -> Finding:
