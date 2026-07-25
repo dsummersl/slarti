@@ -2,6 +2,7 @@
 
 A coordination CLI that checks consistency between [LikeC4](https://likec4.dev) architecture
 diagrams, [LinkML](https://linkml.io) schemas, and [SHACL](https://www.w3.org/TR/shacl/) shapes.
+It also regenerates the diagrams in your architecture document so the prose never drifts.
 
 Each tool is useful on its own with no slarti involved. Slarti adds the seams — rules that span
 two tools, and checks that the answers still agree.
@@ -21,7 +22,7 @@ slarti init          # scaffold docs/slarti/ and a config
 slarti doctor        # resolved paths and tool versions
 slarti check         # run all validations (CI command)
 slarti check --json  # structured output for automation
-slarti docs          # regenerate architecture documents
+slarti docs          # regenerate diagrams and tables into your docs
 slarti docs --check  # fail if committed output is stale
 slarti report        # every rule, shape, and check ID
 slarti report --json # fully detailed, for agents
@@ -34,28 +35,44 @@ rule, enforcer kind, check ID, and remedy.
 
 ```
 docs/
-  architecture.md      prose with generated regions
+  architecture.md      prose with generated diagram and table regions
   diagrams/            GENERATED — never hand-edited
   slarti/
     likec4/*.c4        LikeC4 architecture model
     linkml/*.yaml      LinkML domain schemas
     shacl/*.ttl        hand-written SHACL shapes
-    constraints.yaml   rule registry (join table between prose and enforcement)
-    data/valid/*       fixtures that must pass
+    constraints.yaml   rule registry
+    data/valid/*       fixtures that must pass validation
     data/invalid/*     one fixture per SHACL rule; each must fail
 ```
 
-Every rule in the registry points at an enforcer (`likec4_relation`, `linkml_class`,
-`shacl_shape`, `ownership`, `external`, …) and a negative fixture, or records
-`enforced_by: none` with a reason. `slarti report --json` lists all eight enforcer
-kinds with their ref formats and required fields.
+## How the tools work together
 
-## Checks
+LikeC4 draws the system. LinkML defines the entities. SHACL validates instances. Each
+works standalone:
 
-- **OWN-1..5** — ownership seam between LinkML classes and LikeC4 containers
-- **REG-1..7** — registry seam: dangling enforcers, orphaned shapes, fixture gates
-- **DOC-1..4** — document seam: stale regions, hand-edited diagrams, broken markers
-- **ENV-1**   — delegated tools missing or outside supported version ranges
+```bash
+likec4 start docs/slarti/likec4                  # live architecture browser
+gen-pydantic docs/slarti/linkml/slarti.yaml       # Python interfaces from schema
+pyshacl -s docs/slarti/shacl/invariants.ttl ...   # validate RDF against shapes
+```
+
+A constraint in the registry ties them together:
+
+```yaml
+# docs/slarti/constraints.yaml
+- id: D8
+  statement: A subtask belongs to the same list as its parent.
+  enforced_by:
+    kind: shacl_shape
+    ref: "todo:SubtaskSharesListWithParent"
+    fixture: docs/slarti/data/invalid/D8.yaml
+```
+
+Running `slarti check` walks the seams: it verifies the shape exists, the fixture
+fails (proving the shape fires), both halves of the ownership claim agree, and the
+constraint table in your document still matches. `slarti docs` regenerates the Mermaid
+diagrams and tables so the architecture document never goes stale.
 
 ## Dogfooding
 
