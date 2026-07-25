@@ -2279,8 +2279,10 @@ name = "slartiarch"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "linkml" },
     { name = "linkml-runtime" },
     { name = "pydantic" },
+    { name = "pyshacl" },
     { name = "pyyaml" },
     { name = "rdflib" },
     { name = "tomli-w" },
@@ -2289,10 +2291,8 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "linkml" },
     { name = "mypy" },
     { name = "pre-commit" },
-    { name = "pyshacl" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "radon" },
@@ -2304,8 +2304,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "linkml", specifier = ">=1.11,<2" },
     { name = "linkml-runtime", specifier = ">=1.11.1" },
     { name = "pydantic", specifier = ">=2.11" },
+    { name = "pyshacl", specifier = ">=0.25" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rdflib", specifier = ">=7.6" },
     { name = "tomli-w", specifier = ">=1.2" },
@@ -2314,10 +2316,8 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "linkml", specifier = ">=1.11,<2" },
     { name = "mypy", specifier = ">=2.3" },
     { name = "pre-commit", specifier = ">=4.6" },
-    { name = "pyshacl", specifier = ">=0.40" },
     { name = "pytest", specifier = ">=9" },
     { name = "pytest-cov", specifier = ">=7.1" },
     { name = "radon", specifier = ">=6.0.1" },

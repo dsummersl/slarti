@@ -18,7 +18,6 @@ two tools, and checks that the answers still agree.
 ```bash
 uv tool install slartiarch
 npm install likec4
-pip install linkml pyshacl
 ```
 
 ## Use

@@ -16,6 +16,8 @@ dependencies = [
   "pyyaml>=6.0.3",
   "tomli-w>=1.2",
   "pydantic>=2.11",
+  "pyshacl>=0.25",
+  "linkml>=1.11,<2",
 ]
 
 [project.urls]
@@ -42,9 +44,6 @@ dev = [
   "treepeat>=0.8.0",
   "vulture>=2.16",
   "types-PyYAML>=6.0.12",
-  # slarti dogfoods itself (I13): the delegated tools are the *user's* pinned versions.
-  "linkml>=1.11,<2",
-  "pyshacl>=0.40",
 ]
 
 [tool.ruff]
