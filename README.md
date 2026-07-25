@@ -1,6 +1,9 @@
 # slarti
 
-[![Slartibartfast](https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559)](https://en.wikipedia.org/wiki/Slartibartfast)
+<div align="center">
+  <img src="https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559" width="200" alt="Slartibartfast">
+</div>
+
 Slartibartfast: the curmudgeonly architect of Norway's fjords from *The Hitchhiker's Guide to the Galaxy*. The namesake of this tool.
 
 A coordination CLI that checks consistency between [LikeC4](https://likec4.dev) architecture
