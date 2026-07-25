@@ -5,8 +5,8 @@ from pathlib import Path
 
 import typer
 
+from slarti import __version__, docs, env, report, runner, scaffold
 from slarti import config as config_module
-from slarti import docs, env, report, runner, scaffold
 from slarti.checks import doc_checks
 from slarti.domain import Probe
 from slarti.models import ModelError
@@ -158,6 +158,15 @@ def report_command(
     result = report.build(ctx.models, ctx.constraints)
     typer.echo(result.as_json() if json_output else result.as_text())
     raise typer.Exit(EXIT_FINDINGS if result.orphaned else EXIT_CLEAN)
+
+
+@app.callback(invoke_without_command=True)
+def _version_callback(
+    version: bool = typer.Option(False, "--version", help="Show version"),
+) -> None:
+    if version:
+        typer.echo(f"slartiarch {__version__}")
+        raise typer.Exit()
 
 
 def main() -> None:
