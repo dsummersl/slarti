@@ -60,7 +60,7 @@ def _reg5(config: Config, c: Constraint) -> Finding:
         line=c.line,
         message=f"constraint {c.id} cites decision {c.decision}, which the document never records.",
         remedy=(
-            f"Document decision {c.decision} in {config.paths['document']}, "
+            f"Document decision {c.decision} in {config.documents[0]}, "
             f"or drop the 'decision' field from {c.id}."
         ),
     )
@@ -85,8 +85,8 @@ def _one_constraint(config: Config, models: Models, c: Constraint) -> list[Findi
 
 
 def _decision_findings(config: Config, constraints: list[Constraint]) -> list[Finding]:
-    document = config.path("document")
-    text = document.read_text(encoding="utf-8") if document.is_file() else ""
+    primary = config.document_paths()[0]
+    text = primary.read_text(encoding="utf-8") if primary.is_file() else ""
     return [
         _reg5(config, c) for c in constraints if c.decision is not None and c.decision not in text
     ]

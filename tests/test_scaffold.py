@@ -43,4 +43,4 @@ def test_scaffolded_config_loads(tmp_path: Path) -> None:
     scaffold.init(tmp_path)
     cfg = config_module.load(tmp_path)
     assert cfg.root == tmp_path
-    assert cfg.paths["document"] == "docs/architecture.md"
+    assert cfg.documents == ["docs/architecture.md"]

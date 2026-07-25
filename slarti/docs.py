@@ -18,11 +18,12 @@ class Rendered:
     unknown: tuple[str, ...]
 
 
-def render(
-    config: Config, constraints: list[Constraint], models: Models, diagrams: dict[str, str]
+def _render_one(
+    doc_path: Path, constraints: list[Constraint], models: Models, diagrams: dict[str, str]
 ) -> Rendered:
-    """Regenerate every region of the document from its sources."""
-    text = config.path("document").read_text(encoding="utf-8")
+    if not doc_path.is_file():
+        return Rendered(text="", regions=(), unknown=())
+    text = doc_path.read_text(encoding="utf-8")
     names = [region.name for region in inject.regions(text)]
     unknown = []
     for name in names:
@@ -34,14 +35,21 @@ def render(
     return Rendered(text=text, regions=tuple(names), unknown=tuple(unknown))
 
 
-def write(config: Config, constraints: list[Constraint], models: Models) -> Rendered:
+def render(
+    config: Config, constraints: list[Constraint], models: Models, diagrams: dict[str, str]
+) -> list[Rendered]:
+    """Regenerate every region of every configured document from its sources."""
+    return [_render_one(p, constraints, models, diagrams) for p in config.document_paths()]
+
+
+def write(config: Config, constraints: list[Constraint], models: Models) -> list[Rendered]:
     """`slarti docs`: regenerate diagrams and inject every region."""
     diagrams, _ = generate.diagrams_for(config)
-    rendered = render(config, constraints, models, diagrams)
-    document = config.path("document")
-    if rendered.text != document.read_text(encoding="utf-8"):
-        document.write_text(rendered.text, encoding="utf-8")
-    return rendered
+    rendered_docs = render(config, constraints, models, diagrams)
+    for doc_path, rendered in zip(config.document_paths(), rendered_docs, strict=True):
+        if rendered.text and rendered.text != doc_path.read_text(encoding="utf-8"):
+            doc_path.write_text(rendered.text, encoding="utf-8")
+    return rendered_docs
 
 
 def committed_diagrams(config: Config) -> dict[str, str]:

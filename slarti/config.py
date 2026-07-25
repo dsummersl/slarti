@@ -15,9 +15,10 @@ DEFAULTS: dict[str, str] = {
     "constraints": "docs/slarti/constraints.yaml",
     "shacl_valid": "docs/slarti/data/valid",
     "shacl_invalid": "docs/slarti/data/invalid",
-    "document": "docs/architecture.md",
     "diagrams": "docs/diagrams",
 }
+
+DOCUMENTS_DEFAULT: list[str] = ["docs/architecture.md"]
 
 
 class ConfigError(Exception):
@@ -30,9 +31,13 @@ class Config:
 
     root: Path
     paths: dict[str, str] = field(default_factory=lambda: dict(DEFAULTS))
+    documents: list[str] = field(default_factory=lambda: list(DOCUMENTS_DEFAULT))
 
     def path(self, key: str) -> Path:
         return self.root / self.paths[key]
+
+    def document_paths(self) -> list[Path]:
+        return [self.root / d for d in self.documents]
 
     def rel(self, target: Path) -> str:
         try:
@@ -55,14 +60,23 @@ def find_root(start: Path) -> Path | None:
     return None
 
 
-def _merge(raw: dict[str, Any], source_label: str) -> dict[str, str]:
+def _merge(raw: dict[str, Any], source_label: str) -> tuple[dict[str, str], list[str]]:
     configured = raw.get("paths", {})
-    unknown = sorted(set(configured) - set(DEFAULTS))
+    unknown = sorted(set(configured) - set(DEFAULTS) - {"documents"})
     if unknown:
         raise ConfigError(f"Unknown path keys in {source_label}: {', '.join(unknown)}")
-    paths = dict(DEFAULTS)
-    paths.update({k: str(v) for k, v in configured.items()})
-    return paths
+    docs = _merge_documents(configured.get("documents"))
+    path_keys = {k: str(v) for k, v in configured.items() if k != "documents"}
+    paths = dict(DEFAULTS) | path_keys
+    return paths, docs
+
+
+def _merge_documents(raw: Any) -> list[str]:
+    if raw is None:
+        return list(DOCUMENTS_DEFAULT)
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    return [str(raw)]
 
 
 def _find_pyproject_root(start: Path) -> Path | None:
@@ -77,13 +91,14 @@ def _find_pyproject_root(start: Path) -> Path | None:
 
 def _load_toml(root: Path, name: str, source_label: str) -> Config:
     raw: dict[str, Any] = tomllib.loads((root / name).read_text(encoding="utf-8"))
-    return Config(root=root, paths=_merge(raw, source_label))
+    paths, docs = _merge(raw, source_label)
+    return Config(root=root, paths=paths, documents=docs)
 
 
 def _load_pyproject(root: Path) -> Config:
     raw: dict[str, Any] = tomllib.loads((root / PYPROJECT_NAME).read_text(encoding="utf-8"))
-    paths = _merge(raw["tool"]["slarti"], f"{PYPROJECT_NAME} [tool.slarti]")
-    return Config(root=root, paths=paths)
+    paths, docs = _merge(raw["tool"]["slarti"], f"{PYPROJECT_NAME} [tool.slarti]")
+    return Config(root=root, paths=paths, documents=docs)
 
 
 def load(start: Path | None = None) -> Config:

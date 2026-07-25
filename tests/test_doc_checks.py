@@ -26,7 +26,7 @@ CONSTRAINT = Constraint(
 
 
 def prepare(models, text: str = DOCUMENT, diagrams: dict[str, str] | None = None, monkeypatch=None):
-    models.config.path("document").write_text(text, encoding="utf-8")
+    models.config.document_paths()[0].write_text(text, encoding="utf-8")
     fresh = {"index": "graph TB"} if diagrams is None else diagrams
     monkeypatch.setattr(generate, "diagrams_temp", lambda config: fresh)
     return fresh
@@ -40,16 +40,16 @@ def test_doc1_stale_region(models, monkeypatch) -> None:
 
 def test_a_generated_document_is_clean(models, monkeypatch) -> None:
     fresh = prepare(models, monkeypatch=monkeypatch)
-    rendered = docs.render(models.config, [CONSTRAINT], models, fresh)
-    models.config.path("document").write_text(rendered.text, encoding="utf-8")
+    rendered = docs.render(models.config, [CONSTRAINT], models, fresh)[0]
+    models.config.document_paths()[0].write_text(rendered.text, encoding="utf-8")
     (models.config.path("diagrams") / "index.mmd").write_text("graph TB", encoding="utf-8")
     assert doc_checks.check(models.config, models, [CONSTRAINT]) == []
 
 
 def test_doc2_hand_edited_diagram(models, monkeypatch) -> None:
     fresh = prepare(models, monkeypatch=monkeypatch)
-    rendered = docs.render(models.config, [CONSTRAINT], models, fresh)
-    models.config.path("document").write_text(rendered.text, encoding="utf-8")
+    rendered = docs.render(models.config, [CONSTRAINT], models, fresh)[0]
+    models.config.document_paths()[0].write_text(rendered.text, encoding="utf-8")
     (models.config.path("diagrams") / "index.mmd").write_text("graph LR", encoding="utf-8")
     assert [f.id for f in doc_checks.check(models.config, models, [CONSTRAINT])] == ["DOC-2"]
 
@@ -71,6 +71,6 @@ def test_doc3_missing_document(models, monkeypatch) -> None:
 
 def test_render_is_idempotent(models, monkeypatch) -> None:
     fresh = prepare(models, monkeypatch=monkeypatch)
-    once = docs.render(models.config, [CONSTRAINT], models, fresh).text
-    models.config.path("document").write_text(once, encoding="utf-8")
-    assert docs.render(models.config, [CONSTRAINT], models, fresh).text == once
+    once = docs.render(models.config, [CONSTRAINT], models, fresh)[0].text
+    models.config.document_paths()[0].write_text(once, encoding="utf-8")
+    assert docs.render(models.config, [CONSTRAINT], models, fresh)[0].text == once

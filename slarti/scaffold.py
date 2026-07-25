@@ -11,7 +11,7 @@ shacl = "docs/slarti/shacl"
 constraints = "docs/slarti/constraints.yaml"
 shacl_valid = "docs/slarti/data/valid"
 shacl_invalid = "docs/slarti/data/invalid"
-document = "docs/architecture.md"
+documents = ["docs/architecture.md"]
 diagrams = "docs/diagrams"
 """
 

@@ -62,7 +62,7 @@ _PATH_DESCRIPTIONS: dict[str, str] = {
     "shacl_valid": "Fixtures that must pass SHACL validation",
     "shacl_invalid": "Fixtures that must violate rules (one per rule)",
     "constraints": "Rule registry connecting rules to enforcers",
-    "document": "Generated architecture document",
+    "documents": "Architecture documents to generate",
     "diagrams": "Generated diagram images",
 }
 
@@ -90,6 +90,9 @@ def _show_paths(cfg: config_module.Config) -> None:
     for key, value in sorted(cfg.paths.items()):
         desc = _PATH_DESCRIPTIONS.get(key, "")
         typer.echo(f"  {key:16} {value:40} {desc}")
+    if cfg.documents:
+        desc = _PATH_DESCRIPTIONS.get("documents", "")
+        typer.echo(f"  {'documents':16} {str(cfg.documents):40} {desc}")
 
 
 @app.command()
@@ -128,13 +131,15 @@ def check(
 def docs_command(
     check_only: bool = typer.Option(False, "--check", help="Fail if the committed tree drifts."),
 ) -> None:
-    """Replace markers in documentation with likec4 diagrams. --check exits non-zero if stale."""
+    """Regenerate architecture documents from model sources. --check exits non-zero if stale.
+
+    Replaceable markers: diagram:<view>, ownership, constraints, unverified."""
     ctx = _context()
     if check_only:
         _docs_check(ctx)
-    rendered = docs.write(ctx.config, ctx.constraints, ctx.models)
-    for name in rendered.regions:
-        typer.echo(f"generated {name}")
+    for rendered in docs.write(ctx.config, ctx.constraints, ctx.models):
+        for name in rendered.regions:
+            typer.echo(f"generated {name}")
 
 
 def _docs_check(ctx: runner.Context) -> None:

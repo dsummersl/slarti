@@ -54,7 +54,7 @@ def test_resolvers_answer_both_directions(models) -> None:
 def test_reg1_enforcer_does_not_exist(models) -> None:
     config = models.config
     write_registry(config.path("constraints"), REGISTRY.replace("Task.list", "Task.gone"))
-    (config.path("document")).write_text("ADR-004", encoding="utf-8")
+    (config.document_paths()[0]).write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     findings = registry_checks.check(config, models, constraints)
     assert [f.id for f in findings] == ["REG-1"]
@@ -65,7 +65,7 @@ def test_reg3_unenforced_without_a_reason(models) -> None:
     config = models.config
     text = REGISTRY.replace("    reason: Requires an implementation that does not exist.\n", "")
     write_registry(config.path("constraints"), text)
-    config.path("document").write_text("ADR-004", encoding="utf-8")
+    config.document_paths()[0].write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     assert [f.id for f in registry_checks.check(config, models, constraints)] == ["REG-3"]
 
@@ -74,7 +74,7 @@ def test_reg4_duplicate_id(models) -> None:
     config = models.config
     text = REGISTRY.replace("  - id: U1", "  - id: D1")
     write_registry(config.path("constraints"), text)
-    config.path("document").write_text("ADR-004", encoding="utf-8")
+    config.document_paths()[0].write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     assert "REG-4" in [f.id for f in registry_checks.check(config, models, constraints)]
 
@@ -82,7 +82,7 @@ def test_reg4_duplicate_id(models) -> None:
 def test_reg5_decision_missing_from_the_document(models) -> None:
     config = models.config
     write_registry(config.path("constraints"))
-    config.path("document").write_text("no decisions here", encoding="utf-8")
+    config.document_paths()[0].write_text("no decisions here", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     assert [f.id for f in registry_checks.check(config, models, constraints)] == ["REG-5"]
 
@@ -101,7 +101,7 @@ def test_reg2_orphaned_shape(models) -> None:
     config = models.config
     (config.path("shacl") / "invariants.ttl").write_text(SHAPE, encoding="utf-8")
     write_registry(config.path("constraints"))
-    config.path("document").write_text("ADR-004", encoding="utf-8")
+    config.document_paths()[0].write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     findings = registry_checks.check(config, models, constraints)
     assert [f.id for f in findings] == ["REG-2"]
@@ -114,6 +114,6 @@ def test_reg6_fixture_does_not_exist(models) -> None:
         '      ref: "Task.list"', '      ref: "Task.list"\n      fixture: model/data/invalid/D1.ttl'
     )
     write_registry(config.path("constraints"), text)
-    config.path("document").write_text("ADR-004", encoding="utf-8")
+    config.document_paths()[0].write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))
     assert [f.id for f in registry_checks.check(config, models, constraints)] == ["REG-6"]
