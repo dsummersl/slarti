@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -9,6 +10,7 @@ from slarti.checks import delegated
 from slarti.cli import app
 from slarti.findings import Finding, Report
 from slarti.proc import Result
+from slarti.registry import Constraint, Enforcer
 from tests.conftest import make_models
 
 RUNNER = CliRunner()
@@ -20,10 +22,35 @@ def test_init_scaffolds_and_reports(tmp_path: Path) -> None:
     assert "created slarti.toml" in result.stdout
 
 
-def test_explain_describes_a_check() -> None:
-    result = RUNNER.invoke(app, ["explain", "OWN-3"])
+def test_report_lists_rules_shapes_and_checks(tmp_path: Path, monkeypatch) -> None:
+    ctx = stub_context(tmp_path, constraints=[_constraint()])
+    monkeypatch.setattr("slarti.cli._context", lambda: ctx)
+    result = RUNNER.invoke(app, ["report"])
     assert result.exit_code == 0
-    assert "does not claim it back" in result.stdout
+    assert "C1" in result.stdout
+    assert "OWN-3" in result.stdout
+
+
+def test_report_json_is_fully_detailed(tmp_path: Path, monkeypatch) -> None:
+    ctx = stub_context(tmp_path, constraints=[_constraint()])
+    monkeypatch.setattr("slarti.cli._context", lambda: ctx)
+    result = RUNNER.invoke(app, ["report", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    rule = payload["constraints"][0]
+    assert rule["id"] == "C1"
+    assert rule["enforcer"]["kind"] == "linkml_class"
+    assert rule["enforcer"]["resolves"] is True
+    assert payload["ownership"] == [
+        {"class": "Task", "owner": "todo.api", "claimed_by": ["todo.api"]}
+    ]
+    assert any(c["id"] == "OWN-3" and c["remedy"] for c in payload["checks"])
+    assert payload["summary"]["enforced"] == 1
+
+
+def _constraint() -> Constraint:
+    enforcer = Enforcer(layer=1, kind="linkml_class", ref="Task", fixture=None, fixture_class=None)
+    return Constraint("C1", "Tasks exist.", enforcer, None, None, line=3)
 
 
 def test_check_without_a_project_is_an_environment_error(tmp_path: Path, monkeypatch) -> None:

@@ -38,8 +38,8 @@ slarti check         # delegated validations, then every seam check (the CI comm
 slarti check --json  # the same, as structured findings for an agent
 slarti docs          # regenerate diagrams and tables into docs/architecture.md
 slarti docs --check  # the drift gate: fail if the committed tree is stale
-slarti dangling      # enforced rules, unenforced rules, orphaned shapes
-slarti explain OWN-3 # what a check or constraint ID means, and its remedy
+slarti report        # enforced rules, unenforced rules, orphaned shapes, check IDs
+slarti report --json # the same, fully detailed, for an agent
 ```
 
 Exit codes: `0` clean · `1` findings · `2` environment or usage error.

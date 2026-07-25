@@ -6,8 +6,7 @@ from pathlib import Path
 import typer
 
 from slarti import config as config_module
-from slarti import docs, env, resolvers, runner, scaffold
-from slarti import explain as explain_module
+from slarti import docs, env, report, runner, scaffold
 from slarti.checks import doc_checks
 from slarti.models import ModelError
 from slarti.registry import RegistryError
@@ -19,7 +18,6 @@ EXIT_FINDINGS = 1
 EXIT_ENVIRONMENT = 2
 
 DIRECTORY_ARGUMENT = typer.Argument(Path("."), help="Project root.")
-ID_ARGUMENT = typer.Argument(..., help="A check ID or a constraint ID.")
 
 
 def _load() -> config_module.Config:
@@ -107,44 +105,15 @@ def _docs_check(ctx: runner.Context) -> None:
     raise typer.Exit(EXIT_FINDINGS if findings else EXIT_CLEAN)
 
 
-@app.command()
-def dangling() -> None:
-    """Report enforced rules, unenforced rules and orphaned shapes."""
+@app.command(name="report")
+def report_command(
+    json_output: bool = typer.Option(False, "--json", help="The whole report, fully detailed."),
+) -> None:
+    """Every rule, shape, owned class and check ID slarti knows about."""
     ctx = _context()
-    result = runner.dangling(ctx)
-    typer.echo("Enforced:")
-    for c in result.enforced:
-        enforcer = resolvers.describe(c.enforcer)
-        typer.echo(f"  {c.id}  {c.statement}  <- {c.enforcer.kind} {enforcer}")
-    typer.echo("Unenforced (declared, with a reason):")
-    for c in result.unenforced:
-        typer.echo(f"  {c.id}  {c.statement}")
-    typer.echo("Orphaned shapes (enforced, unreferenced):")
-    for shape in result.orphaned:
-        typer.echo(f"  {shape}")
+    result = report.build(ctx.models, ctx.constraints)
+    typer.echo(result.as_json() if json_output else result.as_text())
     raise typer.Exit(EXIT_FINDINGS if result.orphaned else EXIT_CLEAN)
-
-
-@app.command()
-def explain(identifier: str = ID_ARGUMENT) -> None:
-    """Describe a check or constraint ID, with its remedy. Primarily for agents."""
-    text = explain_module.explain(identifier)
-    if text is not None:
-        typer.echo(f"{identifier.upper()}\n{text}")
-        raise typer.Exit(EXIT_CLEAN)
-    typer.echo(_explain_constraint(identifier))
-
-
-def _explain_constraint(identifier: str) -> str:
-    ctx = _context()
-    for c in ctx.constraints:
-        if c.id.lower() == identifier.lower():
-            enforcer = resolvers.describe(c.enforcer)
-            reason = f"\nUnenforced because: {c.reason}" if c.enforcer.is_none else ""
-            kind = c.enforcer.kind or "none"
-            return f"{c.id}\n{c.statement}\nEnforced by: {kind} {enforcer}{reason}"
-    typer.secho(f"Unknown ID: {identifier}", fg="red", err=True)
-    raise typer.Exit(EXIT_ENVIRONMENT)
 
 
 def main() -> None:

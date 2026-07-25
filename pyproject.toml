@@ -70,7 +70,7 @@ ignore_missing_imports = true
 
 [tool.vulture]
 # typer registers these as commands; vulture cannot see the decorator.
-ignore_names = ["doctor", "docs_command"]
+ignore_names = ["doctor", "docs_command", "report_command"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=slarti  --cov-report=term-missing"

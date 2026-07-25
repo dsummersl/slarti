@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from slarti import models as models_module
-from slarti.explain import CHECKS, explain
+from slarti import report
 
 PAYLOAD = {
     "elements": {
@@ -59,8 +59,7 @@ def test_shape_names_are_curies(tmp_path: Path) -> None:
     assert models_module.shape_line(path, "todo:UniqueMembership") == 4
 
 
-def test_every_check_id_can_be_explained() -> None:
-    for identifier in CHECKS:
-        assert "Remedy" in explain(identifier) or "remedy" in explain(identifier)
-    assert explain("own-1") is not None
-    assert explain("NOPE-9") is None
+def test_every_check_id_has_a_remedy() -> None:
+    catalogue = report.catalogue()
+    assert {c.id for c in catalogue} == set(report.CHECKS)
+    assert all(c.description and c.remedy for c in catalogue)
