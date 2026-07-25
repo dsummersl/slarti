@@ -22,6 +22,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Set up node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install the pinned LikeC4
+        run: npm ci
+
       - name: Install uv
         run: pip install uv
 
@@ -30,6 +38,9 @@ jobs:
 
       - name: CI
         run: make ci
+
+      - name: Architecture (slarti dogfoods itself)
+        run: make arch
 
       - name: Upload code coverage
         if: always()

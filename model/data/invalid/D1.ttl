@@ -1,0 +1,10 @@
+# A finding with no remedy: slarti:FindingCarriesRemedy must fire.
+@prefix slarti: <https://dsummersl.github.io/slarti/> .
+
+<https://dsummersl.github.io/slarti/data/finding-without-remedy>
+  a slarti:Finding ;
+  slarti:id "OWN-1" ;
+  slarti:severity "error" ;
+  slarti:file "model/schema/slarti.yaml" ;
+  slarti:subject "Finding" ;
+  slarti:message "class 'Finding' has no owner." .

@@ -1,0 +1,93 @@
+# The join table between prose and enforcement. User- and agent-authored;
+# slarti reads it and generates the document's tables from it.
+constraints:
+  - id: D1
+    statement: Every finding carries a stable rule ID and a remedy sentence.
+    enforced_by:
+      layer: 3
+      kind: shacl_shape
+      ref: "slarti:FindingCarriesRemedy"
+      fixture: model/data/invalid/D1.ttl
+    decision: ADR-0002
+
+  - id: D2
+    statement: A constraint with no enforcer must give a reason.
+    enforced_by:
+      layer: 3
+      kind: shacl_shape
+      ref: "slarti:UnenforcedConstraintGivesReason"
+      fixture: model/data/invalid/D2.ttl
+    decision: ADR-0002
+
+  - id: D3
+    statement: An enforcer names the thing that enforces the rule.
+    enforced_by:
+      layer: 3
+      kind: shacl_shape
+      ref: "slarti:EnforcerNamesWhatItIs"
+      fixture: model/data/invalid/D3.ttl
+
+  - id: D4
+    statement: A finding names the file it is about.
+    enforced_by:
+      layer: 2
+      kind: linkml_slot
+      ref: "Finding.file"
+
+  - id: D5
+    statement: The checks never invoke LikeC4 or LinkML themselves; the adapters do.
+    enforced_by:
+      layer: 1
+      kind: likec4_absent_relation
+      ref: "slarti.checks -> likec4"
+
+  - id: D6
+    statement: The CLI never reads model sources directly; it goes through the adapters.
+    enforced_by:
+      layer: 1
+      kind: likec4_absent_relation
+      ref: "slarti.cli -> sources"
+
+  - id: D7
+    statement: The environment gate probes LikeC4 before any command that shells out.
+    enforced_by:
+      layer: 1
+      kind: likec4_relation
+      ref: "slarti.env -> likec4"
+
+  - id: D8
+    statement: Every domain entity is owned by exactly one container.
+    enforced_by:
+      layer: 1
+      kind: ownership
+      ref: "Finding"
+    decision: ADR-0002
+
+  - id: D9
+    statement: The document generator writes only generated regions of the sources.
+    enforced_by:
+      layer: 1
+      kind: likec4_relation
+      ref: "slarti.docsgen -> sources"
+
+  - id: U1
+    statement: slarti never modifies a user-authored file.
+    enforced_by: none
+    reason: >-
+      Layer 1 can say which container writes to the sources, not that the write
+      touched only a generated region. Verified instead by a test that hashes every
+      user-authored file before and after each command.
+
+  - id: U2
+    statement: Running a delegated tool directly produces the same result as running it via slarti.
+    enforced_by: none
+    reason: >-
+      No model can assert that a subprocess was passed through unaltered. Verified by
+      a test asserting byte-identical diagnostics.
+
+  - id: U3
+    statement: Generation is idempotent — running slarti docs twice produces identical output.
+    enforced_by: none
+    reason: >-
+      Idempotence is a property of a run, not of the model. Verified by a test that
+      hashes the tree across two runs.

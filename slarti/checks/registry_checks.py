@@ -1,0 +1,200 @@
+from __future__ import annotations
+
+from collections import Counter
+from pathlib import Path
+
+from slarti import fixtures, resolvers
+from slarti.config import Config
+from slarti.findings import Finding
+from slarti.models import Models, shape_line
+from slarti.registry import Constraint, referenced_shapes
+
+
+def _reg1(config: Config, c: Constraint) -> Finding:
+    return Finding(
+        id="REG-1",
+        severity="error",
+        file=config.paths["constraints"],
+        subject=c.id,
+        line=c.line,
+        message=(
+            f"constraint {c.id} is enforced by {c.enforcer.kind} '{c.enforcer.ref}', "
+            "which does not exist."
+        ),
+        remedy=(
+            f"Create the enforcer '{c.enforcer.ref}', correct the reference, "
+            f"or record {c.id} as 'enforced_by: none' with a reason."
+        ),
+    )
+
+
+def _reg3(config: Config, c: Constraint) -> Finding:
+    return Finding(
+        id="REG-3",
+        severity="error",
+        file=config.paths["constraints"],
+        subject=c.id,
+        line=c.line,
+        message=f"constraint {c.id} is unenforced but gives no reason.",
+        remedy=f"Add a 'reason' to {c.id} explaining why the rule cannot be enforced.",
+    )
+
+
+def _reg4(config: Config, constraint_id: str) -> Finding:
+    return Finding(
+        id="REG-4",
+        severity="error",
+        file=config.paths["constraints"],
+        subject=constraint_id,
+        message=f"constraint ID {constraint_id} is declared more than once.",
+        remedy=f"Give each constraint a unique ID; rename one of the {constraint_id} entries.",
+    )
+
+
+def _reg5(config: Config, c: Constraint) -> Finding:
+    return Finding(
+        id="REG-5",
+        severity="error",
+        file=config.paths["constraints"],
+        subject=c.id,
+        line=c.line,
+        message=f"constraint {c.id} cites decision {c.decision}, which the document never records.",
+        remedy=(
+            f"Document decision {c.decision} in {config.paths['document']}, "
+            f"or drop the 'decision' field from {c.id}."
+        ),
+    )
+
+
+def _registry_findings(
+    config: Config, models: Models, constraints: list[Constraint]
+) -> list[Finding]:
+    findings = [f for c in constraints for f in _one_constraint(config, models, c)]
+    return findings + _duplicate_findings(config, constraints)
+
+
+def _duplicate_findings(config: Config, constraints: list[Constraint]) -> list[Finding]:
+    counts = Counter(c.id for c in constraints)
+    return [_reg4(config, i) for i in sorted(i for i, n in counts.items() if n > 1)]
+
+
+def _one_constraint(config: Config, models: Models, c: Constraint) -> list[Finding]:
+    if c.enforcer.is_none:
+        return [] if c.reason else [_reg3(config, c)]
+    return [] if resolvers.resolve(models, c.enforcer) else [_reg1(config, c)]
+
+
+def _decision_findings(config: Config, constraints: list[Constraint]) -> list[Finding]:
+    document = config.path("document")
+    text = document.read_text(encoding="utf-8") if document.is_file() else ""
+    return [
+        _reg5(config, c) for c in constraints if c.decision is not None and c.decision not in text
+    ]
+
+
+def _orphan_shapes(config: Config, models: Models, constraints: list[Constraint]) -> list[Finding]:
+    referenced = referenced_shapes(constraints)
+    return [
+        _reg2(config, curie, path)
+        for curie, path in sorted(models.shapes.items())
+        if curie not in referenced
+    ]
+
+
+def _reg2(config: Config, curie: str, path: Path) -> Finding:
+    return Finding(
+        id="REG-2",
+        severity="error",
+        file=config.rel(path),
+        subject=curie,
+        line=shape_line(path, curie),
+        message=(
+            f"SHACL shape '{curie}' is enforced but no constraint in the registry references it."
+        ),
+        remedy=(
+            f"Add a constraint to {config.paths['constraints']} with "
+            f"enforced_by.kind=shacl_shape and ref='{curie}', or delete the shape."
+        ),
+    )
+
+
+def _reg6(config: Config, c: Constraint, message: str, remedy: str, path: Path) -> Finding:
+    return Finding(
+        id="REG-6",
+        severity="error",
+        file=config.rel(path),
+        subject=c.id,
+        message=message,
+        remedy=remedy,
+    )
+
+
+def _fixture_findings(config: Config, c: Constraint) -> list[Finding]:
+    path = config.root / str(c.enforcer.fixture)
+    if not path.is_file():
+        return [
+            _reg6(
+                config,
+                c,
+                f"constraint {c.id} declares a fixture that does not exist.",
+                f"Create {c.enforcer.fixture} as a case that must violate '{c.enforcer.ref}'.",
+                path,
+            )
+        ]
+    outcome = fixtures.validate(config, path, c.enforcer.fixture_class)
+    if outcome.error is not None:
+        return [
+            _reg6(
+                config,
+                c,
+                f"fixture for {c.id} could not be validated: {outcome.error}",
+                "Make the fixture loadable: use Turtle, or declare 'fixture_class'.",
+                path,
+            )
+        ]
+    if outcome.conforms:
+        return [
+            _reg6(
+                config,
+                c,
+                f"the negative fixture for {c.id} conforms; the shape never fires.",
+                f"Change the fixture so it violates '{c.enforcer.ref}', or fix the shape.",
+                path,
+            )
+        ]
+    return [] if _names_shape(outcome, c) else [_reg7(config, c, path)]
+
+
+def _names_shape(outcome: fixtures.Validation, c: Constraint) -> bool:
+    ref = c.enforcer.ref or ""
+    return ref in outcome.shapes or ref in outcome.report
+
+
+def _reg7(config: Config, c: Constraint, path: Path) -> Finding:
+    return Finding(
+        id="REG-7",
+        severity="error",
+        file=config.rel(path),
+        subject=c.id,
+        message=(
+            f"the fixture for {c.id} fails, but the violation report never names "
+            f"'{c.enforcer.ref}'."
+        ),
+        remedy=(
+            f"Narrow the fixture so the only violation reported is '{c.enforcer.ref}', "
+            "or correct the declared ref."
+        ),
+    )
+
+
+def check(config: Config, models: Models, constraints: list[Constraint]) -> list[Finding]:
+    """REG-1..REG-7: the registry seam, checked in both directions (I14)."""
+    findings = [
+        *_registry_findings(config, models, constraints),
+        *_decision_findings(config, constraints),
+        *_orphan_shapes(config, models, constraints),
+    ]
+    for c in constraints:
+        if c.enforcer.fixture:
+            findings.extend(_fixture_findings(config, c))
+    return findings

@@ -1,0 +1,7 @@
+# An enforcer that names nothing: slarti:EnforcerNamesWhatItIs must fire.
+@prefix slarti: <https://dsummersl.github.io/slarti/> .
+
+<https://dsummersl.github.io/slarti/data/enforcer-without-ref>
+  a slarti:Enforcer ;
+  slarti:kind "shacl_shape" ;
+  slarti:layer 3 .

@@ -1,7 +1,7 @@
 [project]
 name = "slarti"
 version = "0.1.0"
-description = "Slarti"
+description = "A coordination CLI for validated architecture documentation"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -9,6 +9,23 @@ authors = [
 ]
 license = "Apache-2.0"
 classifiers = ["Programming Language :: Python :: 3", "Typing :: Typed"]
+dependencies = [
+  "typer>=0.12",
+  "linkml-runtime>=1.8",
+  "rdflib>=7",
+  "pyyaml>=6",
+  "tomli-w>=1.0",
+]
+
+[project.scripts]
+slarti = "slarti.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["slarti"]
 
 [dependency-groups]
 dev = [
@@ -20,6 +37,10 @@ dev = [
   "radon>=6.0.1",
   "treepeat>=0.6.0",
   "vulture>=2.16",
+  "types-PyYAML>=6",
+  # slarti dogfoods itself (I13): the delegated tools are the *user's* pinned versions.
+  "linkml>=1.11,<2",
+  "pyshacl>=0.30",
 ]
 
 [tool.ruff]
@@ -42,6 +63,14 @@ lint.select = [
 python_version = "3.11"
 strict = true
 packages = ["slarti"]
+
+[[tool.mypy.overrides]]
+module = ["linkml_runtime.*"]
+ignore_missing_imports = true
+
+[tool.vulture]
+# typer registers these as commands; vulture cannot see the decorator.
+ignore_names = ["doctor", "docs_command"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=slarti  --cov-report=term-missing"

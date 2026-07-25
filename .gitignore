@@ -6,3 +6,9 @@ __pycache__/
 .coverage*
 .htmlcov/
 .pytest_cache/
+
+# Node: the user's pinned LikeC4
+node_modules/
+
+# slarti: transient output
+build/
