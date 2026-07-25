@@ -78,7 +78,7 @@ linkml_meta = LinkMLMeta({'default_prefix': 'slarti',
                              'prefix_reference': 'https://w3id.org/linkml/'},
                   'slarti': {'prefix_prefix': 'slarti',
                              'prefix_reference': 'https://dsummersl.github.io/slarti/'}},
-     'source_file': 'docs/models/schema/slarti.yaml',
+     'source_file': 'docs/slarti/linkml/slarti.yaml',
      'title': 'The slarti domain'} )
 
 class Severity(str, Enum):

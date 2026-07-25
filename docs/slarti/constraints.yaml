@@ -7,7 +7,7 @@ constraints:
       layer: 3
       kind: shacl_shape
       ref: "slarti:FindingCarriesRemedy"
-      fixture: docs/models/data/invalid/D1.ttl
+      fixture: docs/slarti/data/invalid/D1.ttl
     decision: ADR-0002
 
   - id: D2
@@ -16,7 +16,7 @@ constraints:
       layer: 3
       kind: shacl_shape
       ref: "slarti:UnenforcedConstraintGivesReason"
-      fixture: docs/models/data/invalid/D2.ttl
+      fixture: docs/slarti/data/invalid/D2.ttl
     decision: ADR-0002
 
   - id: D3
@@ -25,7 +25,7 @@ constraints:
       layer: 3
       kind: shacl_shape
       ref: "slarti:EnforcerNamesWhatItIs"
-      fixture: docs/models/data/invalid/D3.ttl
+      fixture: docs/slarti/data/invalid/D3.ttl
 
   - id: D4
     statement: A finding names the file it is about.
@@ -91,7 +91,7 @@ constraints:
     reason: >-
       No model can assert that a module imports a generated projection rather than a
       copy of it. Verified instead by a test that regenerates slarti/domain.py from
-      docs/models/schema/slarti.yaml and fails if the committed file differs.
+      docs/slarti/linkml/slarti.yaml and fails if the committed file differs.
     decision: ADR-0003
 
   - id: U3

@@ -83,7 +83,7 @@ def export_likec4(config: Config) -> Likec4Model:
     """Invoke `likec4 export json` and parse the result."""
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "model.json"
-        argv = proc.likec4(["export", "json", "-o", str(out), str(config.path("arch"))])
+        argv = proc.likec4(["export", "json", "-o", str(out), str(config.path("likec4"))])
         result = proc.run(argv, cwd=config.root)
         if result.code != 0 or not out.is_file():
             raise ModelError(f"likec4 export json failed:\n{result.stderr or result.stdout}")

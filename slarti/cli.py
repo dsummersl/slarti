@@ -12,7 +12,18 @@ from slarti.domain import Probe
 from slarti.models import ModelError
 from slarti.registry import RegistryError
 
-app = typer.Typer(add_completion=False, help="Coordination CLI for validated architecture docs.")
+app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    help=(
+        "Coordination CLI for validated architecture docs.\n"
+        "\n"
+        "Default paths (see 'slarti doctor' for actual):\n"
+        "  docs/slarti/{likec4/*.c4, linkml/*.yaml, shacl/*.ttl, constraints.yaml}\n"
+        "Config: slarti.toml (preferred) or the tool.slarti section of pyproject.toml.\n"
+        "Typical workflow: init → doctor → check → docs, then report for details."
+    ),
+)
 
 EXIT_CLEAN = 0
 EXIT_FINDINGS = 1
@@ -22,11 +33,7 @@ DIRECTORY_ARGUMENT = typer.Argument(Path("."), help="Project root.")
 
 
 def _load() -> config_module.Config:
-    try:
-        return config_module.load()
-    except config_module.ConfigError as exc:
-        typer.secho(str(exc), fg="red", err=True)
-        raise typer.Exit(EXIT_ENVIRONMENT) from exc
+    return _load_config()
 
 
 def _gate() -> None:
@@ -48,9 +55,21 @@ def _context() -> runner.Context:
         raise typer.Exit(EXIT_ENVIRONMENT) from exc
 
 
+_PATH_DESCRIPTIONS: dict[str, str] = {
+    "likec4": "LikeC4 architecture model sources (*.c4)",
+    "linkml": "LinkML domain entity schemas (*.yaml)",
+    "shacl": "SHACL shape files (*.ttl)",
+    "shacl_valid": "Fixtures that must pass SHACL validation",
+    "shacl_invalid": "Fixtures that must violate rules (one per rule)",
+    "constraints": "Rule registry connecting rules to enforcers",
+    "document": "Generated architecture document",
+    "diagrams": "Generated diagram images",
+}
+
+
 @app.command()
 def init(directory: Path = DIRECTORY_ARGUMENT) -> None:
-    """Scaffold the conventional layout. Never overwrites an existing file."""
+    """Scaffold slarti.toml, docs/slarti/, and architecture doc. Never overwrites."""
     result = scaffold.init(directory)
     for name in result.written:
         typer.echo(f"created {name}")
@@ -58,14 +77,33 @@ def init(directory: Path = DIRECTORY_ARGUMENT) -> None:
         typer.secho(f"kept    {name} (already exists)", fg="yellow")
 
 
+def _load_config() -> config_module.Config:
+    try:
+        return config_module.load()
+    except config_module.ConfigError as exc:
+        typer.secho(str(exc), fg="red", err=True)
+        raise typer.Exit(EXIT_ENVIRONMENT) from exc
+
+
+def _show_paths(cfg: config_module.Config) -> None:
+    typer.echo(f"root: {cfg.root}")
+    for key, value in sorted(cfg.paths.items()):
+        desc = _PATH_DESCRIPTIONS.get(key, "")
+        typer.echo(f"  {key:16} {value:40} {desc}")
+
+
 @app.command()
 def doctor() -> None:
-    """Probe every delegated tool: version, location, supported range."""
+    """Show resolved project paths and probe every delegated tool."""
+    cfg = _load_config()
+    _show_paths(cfg)
+    typer.echo("")
     probes = env.probe_all()
     for probe in probes:
         typer.echo(_probe_line(probe))
         typer.echo(f"     {probe.detail}")
-    raise typer.Exit(EXIT_CLEAN if all(p.ok for p in probes) else EXIT_ENVIRONMENT)
+    failed = any(not p.ok for p in probes)
+    raise typer.Exit(EXIT_ENVIRONMENT if failed else EXIT_CLEAN)
 
 
 def _probe_line(probe: Probe) -> str:
@@ -78,10 +116,10 @@ def check(
     json_output: bool = typer.Option(False, "--json", help="Structured findings on stdout."),
     skip_docs: bool = typer.Option(False, "--no-docs", help="Skip the DOC-* checks."),
 ) -> None:
-    """Run delegated validations, then every slarti check. The CI command."""
+    """Validate model sources against all rules. Use --json. IDs: OWN-*, REG-*, DOC-*, ENV-*."""
     ctx = _context()
     report, delegated_ok = runner.check(ctx, include_docs=not skip_docs)
-    typer.echo(report.as_json() if json_output else report.as_text())
+    typer.echo(report.as_json_verbose() if json_output else report.as_text())
     failed = report.errors > 0 or not delegated_ok
     raise typer.Exit(EXIT_FINDINGS if failed else EXIT_CLEAN)
 
@@ -90,7 +128,7 @@ def check(
 def docs_command(
     check_only: bool = typer.Option(False, "--check", help="Fail if the committed tree drifts."),
 ) -> None:
-    """Regenerate diagrams and registry tables, and inject them into the document."""
+    """Replace markers in documentation with likec4 diagrams. --check exits non-zero if stale."""
     ctx = _context()
     if check_only:
         _docs_check(ctx)
@@ -110,7 +148,7 @@ def _docs_check(ctx: runner.Context) -> None:
 def report_command(
     json_output: bool = typer.Option(False, "--json", help="The whole report, fully detailed."),
 ) -> None:
-    """Every rule, shape, owned class and check ID slarti knows about."""
+    """Rules from constraints.yaml, every shape, class, and check ID. Use --json for detail."""
     ctx = _context()
     result = report.build(ctx.models, ctx.constraints)
     typer.echo(result.as_json() if json_output else result.as_text())

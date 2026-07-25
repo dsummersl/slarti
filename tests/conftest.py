@@ -28,7 +28,7 @@ classes:
 
 
 def make_config(root: Path) -> Config:
-    for key in ("arch", "schema", "shapes", "data_valid", "data_invalid", "diagrams"):
+    for key in ("likec4", "linkml", "shacl", "shacl_valid", "shacl_invalid", "diagrams"):
         (root / DEFAULTS[key]).mkdir(parents=True, exist_ok=True)
     (root / "docs").mkdir(parents=True, exist_ok=True)
     return Config(root=root, paths=dict(DEFAULTS))
@@ -46,7 +46,7 @@ def make_model(owns: tuple[str, ...] = ("Task",)) -> Likec4Model:
 
 def make_models(root: Path, schema: str = SCHEMA, owns: tuple[str, ...] = ("Task",)) -> Models:
     config = make_config(root)
-    (config.path("schema") / "example.yaml").write_text(schema, encoding="utf-8")
+    (config.path("linkml") / "example.yaml").write_text(schema, encoding="utf-8")
     return Models(config=config, _likec4=make_model(owns))
 
 

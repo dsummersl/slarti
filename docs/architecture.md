@@ -255,7 +255,7 @@ case, not a failure: each entry must say why enforcement is not possible.
 | U1 | slarti never modifies a user-authored file. | Layer 1 can say which container writes to the sources, not that the write touched only a generated region. Verified instead by a test that hashes every user-authored file before and after each command. |
 | U2 | Running a delegated tool directly produces the same result as running it via slarti. | No model can assert that a subprocess was passed through unaltered. Verified by a test asserting byte-identical diagnostics. |
 | U3 | Generation is idempotent — running slarti docs twice produces identical output. | Idempotence is a property of a run, not of the model. Verified by a test that hashes the tree across two runs. |
-| U4 | The Python interfaces the implementation uses are generated from the schema. | No model can assert that a module imports a generated projection rather than a copy of it. Verified instead by a test that regenerates slarti/domain.py from docs/models/schema/slarti.yaml and fails if the committed file differs. |
+| U4 | The Python interfaces the implementation uses are generated from the schema. | No model can assert that a module imports a generated projection rather than a copy of it. Verified instead by a test that regenerates slarti/domain.py from docs/slarti/linkml/slarti.yaml and fails if the committed file differs. |
 
 <!-- slarti:end unverified -->
 

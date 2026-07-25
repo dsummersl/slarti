@@ -1,36 +1,18 @@
 # slarti
 
-[![Slartibartfast](https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559)](https://en.wikipedia.org/wiki/Slartibartfast), the curmudgeonly architect of Norway's fjords from *The Hitchhiker's Guide to the Galaxy*, is the namesake of this tool.
+[![Slartibartfast](https://static.wikia.nocookie.net/hitchhikers/images/f/f9/Slartibartfast_comics.png/revision/latest?cb=20230703161559)](https://en.wikipedia.org/wiki/Slartibartfast)
+Slartibartfas: the curmudgeonly architect of Norway's fjords from *The Hitchhiker's Guide to the Galaxy*. The namesake of this tool.
 
 A coordination CLI for validated architecture documentation.
 
-Architecture documents drift, and the drift is invisible: a stale diagram looks
-exactly like a fresh one, and an unenforced rule in prose reads exactly like an
-enforced one.
+Slarti provides consistency between three tools:
 
-- [LikeC4](https://likec4.dev) validates structure and generates diagrams.
-- [LinkML](https://linkml.io) validates entities and generates schemas and projections. Neither can see the other, and neither can see the prose document that claims what they enforce.
-- [pyshacl](https://github.com/rdflib/pyshacl) validates instances against [SHACL](https://www.w3.org/TR/shacl/) graphs (which LinkML generates). It can validate rules about how your system behaves across the graph.
+- [LikeC4](https://likec4.dev): a high level system architecture tool.
+- [LinkML](https://linkml.io): A data modeling language.
+- [pyshacl](https://github.com/rdflib/pyshacl): A [SHACL](https://www.w3.org/TR/shacl/) graph graph validator (which LinkML can generate).
 
-`slarti` coordinates these three tools, and provides a single tool to verify consistency across all three kinds of artifacts.
+The table below is the whole division of labour; the sections after it show the seams.
 
-It owns exactly the joins nobody else holds:
-
-
-| Join | What goes wrong without it |
-|------|----------------------------|
-| LikeC4 ↔ LinkML | An entity exists that no container owns, or a container claims an entity that isn't in the schema. |
-| Document ↔ rules | The constraints table says a rule is enforced by a shape that was deleted; or a shape exists that no rule references. |
-| Document ↔ models | A diagram in the document no longer matches the model it came from. |
-
-Everything else — parsing, validating, rendering, generating — is delegated to
-LikeC4, LinkML and pyshacl as subprocesses, at the versions *you* pinned.
-
-## The three tools, and where they meet
-
-`slarti` delegates every piece of real work to one of three tools. Each answers a
-different kind of question, and none of them can answer another's. The table below
-is the whole division of labour; the sections after it show the seams.
 
 | Tool | Layer | Owns | Cannot say |
 |------|-------|------|------------|

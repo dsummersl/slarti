@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import json
+
 from slarti import __version__
 from slarti.domain import Finding, Severity, Summary
 from slarti.domain import Report as ReportSchema
+from slarti.report import catalogue as _report_catalogue
 
 __all__ = ["Finding", "Report", "Severity"]
+
+
+def _check_catalogue() -> dict[str, str]:
+    return {c.id: c.description for c in _report_catalogue()}
 
 
 class Report:
@@ -46,6 +53,26 @@ class Report:
 
     def as_json(self) -> str:
         return self.as_schema().model_dump_json(indent=2, exclude_none=True)
+
+    def as_json_verbose(self) -> str:
+        failed_ids = {f.id for f in self.findings}
+        catalogue = _check_catalogue()
+        passed = [
+            {"id": cid, "description": catalogue[cid].splitlines()[0]}
+            for cid in sorted(catalogue)
+            if cid not in failed_ids
+        ]
+        payload = {
+            "findings": [f.model_dump(exclude_none=True) for f in self.sorted_findings()],
+            "passed": passed,
+            "summary": {
+                "errors": self.errors,
+                "warnings": self.warnings,
+                "passed": len(passed),
+                "checked": self.checked,
+            },
+        }
+        return json.dumps(payload, indent=2, sort_keys=False)
 
     def as_text(self) -> str:
         if not self.findings:

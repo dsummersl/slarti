@@ -82,15 +82,14 @@ ignore_names = ["doctor", "docs_command", "report_command"]
 exclude = ["slarti/domain.py"]
 
 [tool.slarti.paths]
-arch = "docs/models/arch"
-schema = "docs/models/schema"
-shapes = "docs/models/shapes"
-constraints = "docs/models/constraints.yaml"
-data_valid = "docs/models/data/valid"
-data_invalid = "docs/models/data/invalid"
+likec4 = "docs/slarti/likec4"
+linkml = "docs/slarti/linkml"
+shacl = "docs/slarti/shacl"
+constraints = "docs/slarti/constraints.yaml"
+shacl_valid = "docs/slarti/data/valid"
+shacl_invalid = "docs/slarti/data/invalid"
 document = "docs/architecture.md"
 diagrams = "docs/diagrams"
-build = "build"
 
 [tool.pytest.ini_options]
 addopts = "--cov=slarti  --cov-report=term-missing"

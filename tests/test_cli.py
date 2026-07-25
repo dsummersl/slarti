@@ -41,7 +41,7 @@ def test_report_json_is_fully_detailed(tmp_path: Path, monkeypatch) -> None:
     assert rule["id"] == "C1"
     assert rule["enforcer"]["kind"] == "linkml_class"
     assert rule["enforcer"]["resolves"] is True
-    assert payload["ownership"] == [
+    assert payload["linkml_ownership"] == [
         {"class": "Task", "owner": "todo.api", "claimed_by": ["todo.api"]}
     ]
     assert any(c["id"] == "OWN-3" and c["remedy"] for c in payload["checks"])

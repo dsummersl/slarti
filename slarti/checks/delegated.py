@@ -20,7 +20,7 @@ class Delegation:
 
 
 def likec4_validate(config: Config) -> Delegation:
-    argv = proc.likec4(["validate", str(config.path("arch"))])
+    argv = proc.likec4(["validate", str(config.path("likec4"))])
     return Delegation("likec4", argv, proc.run(argv, cwd=config.root))
 
 

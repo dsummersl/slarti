@@ -115,8 +115,8 @@ def check(models: Models) -> list[Finding]:
     """OWN-1..OWN-5: the ownership seam, checked in both directions (I14)."""
     config = models.config
     schema_files = config.schema_files()
-    schema_file = config.rel(schema_files[0]) if schema_files else config.paths["schema"]
-    arch_dir = config.paths["arch"]
+    schema_file = config.rel(schema_files[0]) if schema_files else config.paths["linkml"]
+    arch_dir = config.paths["likec4"]
     model = models.likec4
     return [
         *_class_findings(models, model, schema_file),

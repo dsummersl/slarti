@@ -30,8 +30,8 @@ needs_pyshacl = pytest.mark.skipif(shutil.which("pyshacl") is None, reason="pysh
 
 
 def write(config, name: str, text: str) -> Path:
-    (config.path("shapes") / "invariants.ttl").write_text(SHAPES, encoding="utf-8")
-    path = config.path("data_invalid") / name
+    (config.path("shacl") / "invariants.ttl").write_text(SHAPES, encoding="utf-8")
+    path = config.path("shacl_invalid") / name
     path.write_text(text, encoding="utf-8")
     return path
 
@@ -51,7 +51,7 @@ def test_a_conforming_fixture_proves_nothing(config) -> None:
 
 
 def test_a_yaml_fixture_without_a_class_is_an_error(config) -> None:
-    path = config.path("data_invalid") / "D3.yaml"
+    path = config.path("shacl_invalid") / "D3.yaml"
     path.write_text("id: t1\n", encoding="utf-8")
     outcome = fixtures.validate(config, path)
     assert outcome.error is not None

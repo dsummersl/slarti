@@ -99,7 +99,7 @@ example:TaskHasList
 
 def test_reg2_orphaned_shape(models) -> None:
     config = models.config
-    (config.path("shapes") / "invariants.ttl").write_text(SHAPE, encoding="utf-8")
+    (config.path("shacl") / "invariants.ttl").write_text(SHAPE, encoding="utf-8")
     write_registry(config.path("constraints"))
     config.path("document").write_text("ADR-004", encoding="utf-8")
     constraints = registry.load(config.path("constraints"))

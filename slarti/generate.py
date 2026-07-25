@@ -64,7 +64,7 @@ def ownership_table(models: Models) -> str:
 
 def render_diagrams(config: Config, outdir: Path) -> dict[str, str]:
     """Delegate diagram generation to `likec4 codegen mermaid` (I2, §6)."""
-    argv = proc.likec4(["codegen", "mermaid", "-o", str(outdir), str(config.path("arch"))])
+    argv = proc.likec4(["codegen", "mermaid", "-o", str(outdir), str(config.path("likec4"))])
     result = proc.run(argv, cwd=config.root)
     if result.code != 0:
         raise RuntimeError(f"likec4 codegen mermaid failed:\n{result.stderr or result.stdout}")

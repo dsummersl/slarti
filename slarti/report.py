@@ -105,12 +105,66 @@ def catalogue() -> list[Check]:
     return [_check(identifier, text) for identifier, text in sorted(CHECKS.items())]
 
 
+def _enforcer_catalog() -> list[dict[str, Any]]:
+    return [
+        {
+            "kind": "shacl_shape",
+            "description": "A SHACL shape exists in the shapes directory (pyshacl)",
+            "ref_format": "SHACL IRI/CURIE, e.g. 'slarti:FindingCarriesRemedy'",
+            "optional_fields": ["fixture", "fixture_class"],
+        },
+        {
+            "kind": "linkml_slot",
+            "description": "A slot is declared on a class in the LinkML schema",
+            "ref_format": "ClassName.slotName, e.g. 'Finding.file'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "linkml_class",
+            "description": "A class exists in the LinkML schema",
+            "ref_format": "class name, e.g. 'Finding'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "likec4_relation",
+            "description": "A directed relation exists between two LikeC4 elements",
+            "ref_format": "source -> target, e.g. 'slarti.env -> likec4'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "likec4_absent_relation",
+            "description": "Two LikeC4 elements exist but have no relation between them",
+            "ref_format": "source -> target, e.g. 'slarti.cli -> sources'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "likec4_element",
+            "description": "An element exists in the LikeC4 model",
+            "ref_format": "element ID, e.g. 'slarti.findings'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "ownership",
+            "description": "A LinkML class declares an owner that exists in the LikeC4 model",
+            "ref_format": "class name, e.g. 'Finding'",
+            "optional_fields": [],
+        },
+        {
+            "kind": "external",
+            "description": "Enforced outside slarti (CI, etc.). Resolves; must give a reason.",
+            "ref_format": "free-form",
+            "optional_fields": [],
+        },
+    ]
+
+
 @dataclass(frozen=True)
 class Rule:
     """A registry constraint with its enforcer resolved against the models."""
 
     constraint: Constraint
     resolves: bool
+    file: str
 
     @property
     def enforced(self) -> bool:
@@ -122,6 +176,7 @@ class Rule:
         return {
             "id": c.id,
             "statement": c.statement,
+            "file": self.file,
             "line": c.line,
             "decision": c.decision,
             "reason": c.reason,
@@ -178,8 +233,8 @@ class Report:
     rules: list[Rule]
     shapes: list[Shape]
     ownership: list[Owned]
-    elements: list[dict[str, Any]]
     checks: list[Check]
+    constraints_file: str
 
     @property
     def enforced(self) -> list[Rule]:
@@ -196,19 +251,19 @@ class Report:
     def as_json(self) -> str:
         payload = {
             "seam_version": __version__,
+            "constraints_file": self.constraints_file,
+            "enforcer_kinds": _enforcer_catalog(),
             "constraints": [r.as_dict() for r in self.rules],
-            "shapes": [s.as_dict() for s in self.shapes],
-            "ownership": [o.as_dict() for o in self.ownership],
-            "elements": self.elements,
+            "shacl": [s.as_dict() for s in self.shapes],
+            "linkml_ownership": [o.as_dict() for o in self.ownership],
             "checks": [c.as_dict() for c in self.checks],
             "summary": {
                 "constraints": len(self.rules),
                 "enforced": len(self.enforced),
                 "unenforced": len(self.unenforced),
-                "shapes": len(self.shapes),
+                "shacl_shapes": len(self.shapes),
                 "orphaned_shapes": len(self.orphaned),
-                "elements": len(self.elements),
-                "classes": len(self.ownership),
+                "owned_classes": len(self.ownership),
                 "checks": len(self.checks),
             },
         }
@@ -217,12 +272,16 @@ class Report:
     def as_text(self) -> str:
         lines = ["Enforced:"]
         lines.extend(_enforced_lines(self.enforced))
+        lines.append("")
         lines.append("Unenforced (declared, with a reason):")
         lines.extend(_unenforced_lines(self.unenforced))
+        lines.append("")
         lines.append("Orphaned shapes (declared, unreferenced):")
         lines.extend(f"  {s.curie}  {s.file}" for s in self.orphaned)
+        lines.append("")
         lines.append("Checks:")
         lines.extend(f"  {c.id}  {c.description.splitlines()[0]}" for c in self.checks)
+        lines.append("")
         lines.append(
             f"{len(self.enforced)} enforced, {len(self.unenforced)} unenforced, "
             f"{len(self.orphaned)} orphaned shape(s)."
@@ -273,22 +332,16 @@ def _ownership(models: Models) -> list[Owned]:
     ]
 
 
-def _elements(models: Models) -> list[dict[str, Any]]:
-    return [
-        {"id": e.id, "title": e.title, "kind": e.kind, "owns": list(e.owns or [])}
-        for e in models.likec4.elements.values()
-    ]
-
-
 def build(models: Models, constraints: list[Constraint]) -> Report:
     """Resolve every seam into one report."""
     ordered = sorted(constraints, key=lambda c: c.id)
+    file = models.config.paths["constraints"]
     return Report(
-        rules=[Rule(c, resolvers.resolve(models, c.enforced_by)) for c in ordered],
+        rules=[Rule(c, resolvers.resolve(models, c.enforced_by), file) for c in ordered],
         shapes=_shapes(models, ordered),
         ownership=_ownership(models),
-        elements=_elements(models),
         checks=catalogue(),
+        constraints_file=file,
     )
 
 

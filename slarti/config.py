@@ -9,15 +9,14 @@ CONFIG_NAME = "slarti.toml"
 PYPROJECT_NAME = "pyproject.toml"
 
 DEFAULTS: dict[str, str] = {
-    "arch": "docs/models/arch",
-    "schema": "docs/models/schema",
-    "shapes": "docs/models/shapes",
-    "constraints": "docs/models/constraints.yaml",
-    "data_valid": "docs/models/data/valid",
-    "data_invalid": "docs/models/data/invalid",
+    "likec4": "docs/slarti/likec4",
+    "linkml": "docs/slarti/linkml",
+    "shacl": "docs/slarti/shacl",
+    "constraints": "docs/slarti/constraints.yaml",
+    "shacl_valid": "docs/slarti/data/valid",
+    "shacl_invalid": "docs/slarti/data/invalid",
     "document": "docs/architecture.md",
     "diagrams": "docs/diagrams",
-    "build": "build",
 }
 
 
@@ -42,10 +41,10 @@ class Config:
             return str(target)
 
     def schema_files(self) -> list[Path]:
-        return sorted(self.path("schema").glob("*.yaml"))
+        return sorted(self.path("linkml").glob("*.yaml"))
 
     def shape_files(self) -> list[Path]:
-        return sorted(self.path("shapes").glob("*.ttl"))
+        return sorted(self.path("shacl").glob("*.ttl"))
 
 
 def find_root(start: Path) -> Path | None:
