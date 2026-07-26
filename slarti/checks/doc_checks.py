@@ -90,14 +90,13 @@ def _table_findings(file: str, constraints: list[Constraint], text: str) -> list
 
 
 def _check_one_doc(
-    config: Config, doc_path: Path, constraints: list[Constraint], rendered: docs.Rendered,
+    config: Config, doc_path: Path, rendered: docs.Rendered,
 ) -> list[Finding]:
     file = config.rel(doc_path)
     current = doc_path.read_text(encoding="utf-8")
     findings: list[Finding] = []
     findings.extend(_marker_findings(file, rendered.unknown))
     findings.extend(_region_findings(file, current, rendered))
-    findings.extend(_table_findings(file, constraints, rendered.text))
     return findings
 
 
@@ -112,8 +111,10 @@ def _check_existing(
                       "Balance the slarti:begin and slarti:end markers.")]
     findings: list[Finding] = []
     for doc_path, rendered in zip(doc_paths, rendered_docs, strict=True):
-        findings.extend(_check_one_doc(config, doc_path, constraints, rendered))
+        findings.extend(_check_one_doc(config, doc_path, rendered))
     findings.extend(_diagram_findings(config, fresh))
+    all_tables = "".join(r.text for r in rendered_docs)
+    findings.extend(_table_findings(config.rel(doc_paths[0]), constraints, all_tables))
     return findings
 
 
