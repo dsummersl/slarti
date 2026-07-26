@@ -96,13 +96,23 @@ def _parse_erd_opts(region: str) -> list[str]:
     return extra
 
 
+def _classes_flags(val: str) -> list[str]:
+    """Split a comma-separated class list into repeated ``--classes`` flags."""
+    result: list[str] = []
+    for name in val.split(","):
+        stripped = name.strip()
+        if stripped:
+            result += ["--classes", stripped]
+    return result
+
+
 def _erd_opt(key: str, val: str) -> list[str]:
     flag = _BOOL_ERD_OPTIONS.get(key)
     if flag:
         return [f"--{flag}" if val in ("", "true", "1") else f"--no-{flag}"]
     if key == "classes":
-        return ["--classes", val]
-    return [f"--{key}", val]
+        return _classes_flags(val)
+    return [f"--{key.replace('_', '-')}", val]
 
 
 def linkml_erd_block(models: Models, extra: list[str] | None = None) -> str:
