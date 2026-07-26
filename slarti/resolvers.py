@@ -38,6 +38,16 @@ def _relation_absent(models: Models, ref: str) -> bool:
     return all(part in known for part in pair) and not models.likec4.has_relation(*pair)
 
 
+def absent_relation_violated(models: Models, ref: str) -> bool:
+    """Both elements exist but the forbidden relation is present."""
+    pair = _split_relation(ref)
+    if pair is None:
+        return False
+    source, target = pair
+    elements = models.likec4.elements
+    return source in elements and target in elements and models.likec4.has_relation(source, target)
+
+
 def _ownership_holds(models: Models, ref: str) -> bool:
     owner = models.class_annotation(ref, "owner")
     return owner is not None and owner in models.likec4.elements

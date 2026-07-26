@@ -18,8 +18,8 @@ def _reg1(config: Config, c: Constraint) -> Finding:
         subject=c.id,
         line=c.line,
         message=(
-            f"constraint {c.id} is enforced by {kind_text(c.enforced_by)} '{c.enforced_by.ref}', "
-            "which does not exist."
+            f"constraint {c.id} declares enforcer {kind_text(c.enforced_by)} "
+            f"'{c.enforced_by.ref}', which does not resolve."
         ),
         remedy=(
             f"Create the enforcer '{c.enforced_by.ref}', correct the reference, "
@@ -58,10 +58,27 @@ def _reg5(config: Config, c: Constraint) -> Finding:
         file=config.paths["constraints"],
         subject=c.id,
         line=c.line,
-        message=f"constraint {c.id} cites decision {c.decision}, which the document never records.",
+        message=f"constraint {c.id} cites decision {c.decision}, which no document records.",
         remedy=(
-            f"Document decision {c.decision} in {config.documents[0]}, "
+            f"Document decision {c.decision} in one of the configured architecture documents, "
             f"or drop the 'decision' field from {c.id}."
+        ),
+    )
+
+
+def _reg8(config: Config, c: Constraint) -> Finding:
+    return Finding(
+        id="REG-8",
+        severity=Severity.error,
+        file=config.paths["likec4"],
+        subject=c.id,
+        line=c.line,
+        message=(
+            f"constraint {c.id} forbids relation '{c.enforced_by.ref}', "
+            "which now exists in the model."
+        ),
+        remedy=(
+            f"Remove the forbidden relation '{c.enforced_by.ref}' from the LikeC4 model."
         ),
     )
 
@@ -81,15 +98,28 @@ def _duplicate_findings(config: Config, constraints: list[Constraint]) -> list[F
 def _one_constraint(config: Config, models: Models, c: Constraint) -> list[Finding]:
     if is_unenforced(c.enforced_by):
         return [] if c.reason else [_reg3(config, c)]
-    return [] if resolvers.resolve(models, c.enforced_by) else [_reg1(config, c)]
+    if resolvers.resolve(models, c.enforced_by):
+        return []
+    return _absent_violation(config, models, c) or [_reg1(config, c)]
+
+
+def _absent_violation(config: Config, models: Models, c: Constraint) -> list[Finding] | None:
+    if c.enforced_by.kind == "likec4_absent_relation" and resolvers.absent_relation_violated(
+        models, c.enforced_by.ref or ""
+    ):
+        return [_reg8(config, c)]
+    return None
 
 
 def _decision_findings(config: Config, constraints: list[Constraint]) -> list[Finding]:
-    primary = config.document_paths()[0]
-    text = primary.read_text(encoding="utf-8") if primary.is_file() else ""
-    return [
-        _reg5(config, c) for c in constraints if c.decision is not None and c.decision not in text
-    ]
+    all_text = "".join(
+        p.read_text(encoding="utf-8") for p in config.document_paths() if p.is_file()
+    )
+    return [_reg5(config, c) for c in constraints if _decision_missing(c, all_text)]
+
+
+def _decision_missing(c: Constraint, all_text: str) -> bool:
+    return c.decision is not None and c.decision not in all_text
 
 
 def _orphan_shapes(config: Config, models: Models, constraints: list[Constraint]) -> list[Finding]:

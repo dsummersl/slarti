@@ -32,7 +32,7 @@ CHECKS: dict[str, str] = {
         "Remedy: leave the class in exactly one element's 'owns' metadata."
     ),
     "REG-1": (
-        "A constraint points at an enforcer that does not exist.\n"
+        "A constraint declares an enforcer that does not resolve in the model.\n"
         "Remedy: create the enforcer, correct the ref, or record the rule as "
         "'enforced_by: none' with a reason."
     ),
@@ -47,8 +47,9 @@ CHECKS: dict[str, str] = {
     ),
     "REG-4": "A constraint ID is declared twice.\nRemedy: give every constraint a unique ID.",
     "REG-5": (
-        "A constraint cites a decision the document never records.\n"
-        "Remedy: document the decision, or drop the 'decision' field."
+        "A constraint cites a decision that no document records.\n"
+        "Remedy: document the decision in one of the architecture documents, or drop the "
+        "'decision' field."
     ),
     "REG-6": (
         "A declared negative fixture is missing, unloadable, or conforms.\n"
@@ -57,6 +58,11 @@ CHECKS: dict[str, str] = {
     "REG-7": (
         "A negative fixture fails, but the report never names the declared shape.\n"
         "Remedy: narrow the fixture, or correct the declared ref."
+    ),
+    "REG-8": (
+        "A likec4_absent_relation constraint is violated — the forbidden relation now exists "
+        "in the model.\n"
+        "Remedy: remove the forbidden relation from the LikeC4 model."
     ),
     "DOC-1": (
         "A generated region is stale relative to its source.\n"
