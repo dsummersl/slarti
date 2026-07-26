@@ -3,5 +3,4 @@
 
 <https://dsummersl.github.io/slarti/data/enforcer-without-ref>
   a slarti:Enforcer ;
-  slarti:kind "shacl_shape" ;
-  slarti:layer 3 .
+  slarti:kind "shacl_shape" .

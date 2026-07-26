@@ -6,7 +6,7 @@ from slarti.registry import Constraint, Enforcer
 ENFORCED = Constraint(
     id="D1",
     statement="A task belongs to exactly one list.",
-    enforced_by=Enforcer(layer=2, kind="linkml_slot", ref="Task.list"),
+    enforced_by=Enforcer(kind="linkml_slot", ref="Task.list"),
     reason=None,
     decision="ADR-004",
 )

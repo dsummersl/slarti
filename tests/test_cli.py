@@ -49,7 +49,7 @@ def test_report_json_is_fully_detailed(tmp_path: Path, monkeypatch) -> None:
 
 
 def _constraint() -> Constraint:
-    enforcer = Enforcer(layer=1, kind="linkml_class", ref="Task", fixture=None, fixture_class=None)
+    enforcer = Enforcer(kind="linkml_class", ref="Task", fixture=None, fixture_class=None)
     return Constraint(id="C1", statement="Tasks exist.", enforced_by=enforcer, line=3)
 
 

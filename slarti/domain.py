@@ -196,7 +196,6 @@ class Enforcer(ConfiguredBaseModel):
     linkml_meta: ClassVar[LinkMLMeta] = LinkMLMeta({'annotations': {'owner': {'tag': 'owner', 'value': 'slarti.registry'}},
          'from_schema': 'https://dsummersl.github.io/slarti'})
 
-    layer: Optional[int] = Field(default=None, description="""Which layer holds the rule; 1 structure, 2 schema, 3 shapes.""", json_schema_extra = { "linkml_meta": {'domain_of': ['Enforcer']} })
     kind: Optional[EnforcerKind] = Field(default=None, description="""What sort of enforcer this is.""", json_schema_extra = { "linkml_meta": {'domain_of': ['Enforcer', 'Element']} })
     ref: Optional[str] = Field(default=None, description="""The identifier of the enforcer, resolved against the models.""", json_schema_extra = { "linkml_meta": {'domain_of': ['Enforcer']} })
     fixture: Optional[str] = Field(default=None, description="""A case that must fail, naming this enforcer in the violation report.""", json_schema_extra = { "linkml_meta": {'domain_of': ['Enforcer']} })

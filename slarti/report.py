@@ -9,6 +9,21 @@ from slarti.checks import ownership as ownership_checks
 from slarti.models import Models
 from slarti.registry import Constraint, is_unenforced, kind_text
 
+_KIND_TO_LAYER: dict[str | None, int | None] = {
+    "likec4_element": 1,
+    "likec4_relation": 1,
+    "likec4_absent_relation": 1,
+    "ownership": 1,
+    "linkml_class": 2,
+    "linkml_slot": 2,
+    "shacl_shape": 3,
+    "external": None,
+}
+
+
+def _layer_for(kind: str | None) -> int | None:
+    return _KIND_TO_LAYER.get(kind)
+
 CHECKS: dict[str, str] = {
     "OWN-1": (
         "A schema class declares no owning container.\n"
@@ -188,7 +203,7 @@ class Rule:
             "reason": c.reason,
             "enforced": self.enforced,
             "enforcer": {
-                "layer": e.layer,
+                "layer": _layer_for(e.kind),
                 "kind": e.kind,
                 "ref": e.ref,
                 "fixture": e.fixture,

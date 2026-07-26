@@ -11,7 +11,6 @@ REGISTRY = """constraints:
   - id: D1
     statement: A task belongs to exactly one list.
     enforced_by:
-      layer: 2
       kind: linkml_slot
       ref: "Task.list"
     decision: ADR-004
@@ -41,13 +40,13 @@ def test_missing_registry_is_an_error(tmp_path: Path) -> None:
 
 
 def test_resolvers_answer_both_directions(models) -> None:
-    here = registry.Enforcer(layer=2, kind="linkml_slot", ref="Task.list")
+    here = registry.Enforcer(kind="linkml_slot", ref="Task.list")
     assert resolvers.resolve(models, here)
-    gone = registry.Enforcer(layer=2, kind="linkml_slot", ref="Task.gone")
+    gone = registry.Enforcer(kind="linkml_slot", ref="Task.gone")
     assert not resolvers.resolve(models, gone)
-    absent = registry.Enforcer(layer=1, kind="likec4_absent_relation", ref="todo.db -> todo.api")
+    absent = registry.Enforcer(kind="likec4_absent_relation", ref="todo.db -> todo.api")
     assert resolvers.resolve(models, absent)
-    present = registry.Enforcer(layer=1, kind="likec4_relation", ref="todo.api -> todo.db")
+    present = registry.Enforcer(kind="likec4_relation", ref="todo.api -> todo.db")
     assert resolvers.resolve(models, present)
 
 

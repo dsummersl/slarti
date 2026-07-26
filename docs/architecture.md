@@ -247,7 +247,6 @@ Enforcer {
     string fixture  
     string fixture_class  
     EnforcerKind kind  
-    integer layer  
     string ref  
 }
 Finding {

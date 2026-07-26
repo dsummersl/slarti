@@ -4,7 +4,6 @@ constraints:
   - id: D1
     statement: Every finding carries a stable rule ID and a remedy sentence.
     enforced_by:
-      layer: 3
       kind: shacl_shape
       ref: "slarti:FindingCarriesRemedy"
       fixture: docs/slarti/data/invalid/D1.ttl
@@ -13,7 +12,6 @@ constraints:
   - id: D2
     statement: A constraint with no enforcer must give a reason.
     enforced_by:
-      layer: 3
       kind: shacl_shape
       ref: "slarti:UnenforcedConstraintGivesReason"
       fixture: docs/slarti/data/invalid/D2.ttl
@@ -22,7 +20,6 @@ constraints:
   - id: D3
     statement: An enforcer names the thing that enforces the rule.
     enforced_by:
-      layer: 3
       kind: shacl_shape
       ref: "slarti:EnforcerNamesWhatItIs"
       fixture: docs/slarti/data/invalid/D3.ttl
@@ -30,35 +27,30 @@ constraints:
   - id: D4
     statement: A finding names the file it is about.
     enforced_by:
-      layer: 2
       kind: linkml_slot
       ref: "Finding.file"
 
   - id: D5
     statement: The checks never invoke LikeC4 or LinkML themselves; the adapters do.
     enforced_by:
-      layer: 1
       kind: likec4_absent_relation
       ref: "slarti.checks -> likec4"
 
   - id: D6
     statement: The CLI never reads model sources directly; it goes through the adapters.
     enforced_by:
-      layer: 1
       kind: likec4_absent_relation
       ref: "slarti.cli -> sources"
 
   - id: D7
     statement: The environment gate probes LikeC4 before any command that shells out.
     enforced_by:
-      layer: 1
       kind: likec4_relation
       ref: "slarti.env -> likec4"
 
   - id: D8
     statement: Every domain entity is owned by exactly one container.
     enforced_by:
-      layer: 1
       kind: ownership
       ref: "Finding"
     decision: ADR-0002
@@ -66,7 +58,6 @@ constraints:
   - id: D9
     statement: The document generator writes only generated regions of the sources.
     enforced_by:
-      layer: 1
       kind: likec4_relation
       ref: "slarti.docsgen -> sources"
 

@@ -42,7 +42,6 @@ def load_enforcer(raw: Any) -> Enforcer:
         raise RegistryError(f"enforced_by must be a mapping or 'none', got: {raw!r}")
     try:
         return Enforcer(
-            layer=raw.get("layer"),
             kind=raw.get("kind"),
             ref=raw.get("ref"),
             fixture=raw.get("fixture"),
