@@ -74,6 +74,11 @@ DOCUMENT = """# Architecture
 <!-- slarti:begin ownership -->
 <!-- slarti:end ownership -->
 
+## Schema entities
+
+<!-- slarti:begin linkml_erd -->
+<!-- slarti:end linkml_erd -->
+
 ## Constraints
 
 <!-- slarti:begin constraints -->

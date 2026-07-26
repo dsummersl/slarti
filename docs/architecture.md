@@ -221,7 +221,89 @@ a dangling pointer and an unclaimed target are different failures.
 
 <!-- slarti:end ownership -->
 
-## 7. Enforced rules
+## 7. Schema entities
+
+The entities `slarti` reasons about, and how they relate to each other, as derived
+from the LinkML schema.
+
+<!-- slarti:begin linkml_erd -->
+
+```mermaid
+erDiagram
+Constraint {
+    string id  
+    string decision  
+    integer line  
+    string reason  
+    string statement  
+}
+Element {
+    string id  
+    string kind  
+    stringList owns  
+    string title  
+}
+Enforcer {
+    string fixture  
+    string fixture_class  
+    EnforcerKind kind  
+    integer layer  
+    string ref  
+}
+Finding {
+    string id  
+    string file  
+    integer line  
+    string message  
+    string remedy  
+    Severity severity  
+    string subject  
+}
+Probe {
+    string detail  
+    string location  
+    boolean ok  
+    string tool  
+    string version  
+}
+ProjectPaths {
+    string arch  
+    string build  
+    string constraints  
+    string data_invalid  
+    string data_valid  
+    string diagrams  
+    string document  
+    string schema_dir  
+    string shapes  
+}
+Region {
+    string name  
+    string body  
+    integer line  
+}
+Relation {
+    string source  
+    string target  
+    string title  
+}
+Report {
+    string seam_version  
+}
+Summary {
+    integer checked  
+    integer errors  
+    integer warnings  
+}
+
+Constraint ||--|| Enforcer : "enforced_by"
+Report ||--|| Summary : "summary"
+Report ||--}o Finding : "findings"
+```
+
+<!-- slarti:end linkml_erd -->
+
+## 8. Enforced rules
 
 Each rule below points at an enforcer that `slarti` resolves against the models on
 every run. If the enforcer disappears, the rule becomes a `REG-1` finding rather
@@ -243,7 +325,7 @@ than a sentence that quietly stops being true.
 
 <!-- slarti:end constraints -->
 
-## 8. Unverified invariants
+## 9. Unverified invariants
 
 Rules that are stated but not mechanically enforced. This table is the honest
 case, not a failure: each entry must say why enforcement is not possible.
@@ -259,7 +341,7 @@ case, not a failure: each entry must say why enforcement is not possible.
 
 <!-- slarti:end unverified -->
 
-## 9. Decisions
+## 10. Decisions
 
 - **ADR-0001 — Python project.** See `docs/adr/0001-python-project.md`.
 - **ADR-0002 — Findings are the interface.** See
@@ -276,7 +358,7 @@ case, not a failure: each entry must say why enforcement is not possible.
   around them. Two definitions of one entity is the drift `slarti` exists to catch,
   so the schema is the only one, and a stale projection fails the test suite.
 
-## 10. Risks and technical debt
+## 11. Risks and technical debt
 
 - Upstream churn in LikeC4's JSON export or LinkML's generators would produce
   wrong findings. Mitigated by a hard version ceiling and a loud refusal to run.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from slarti import proc, resolvers
 from slarti.checks.ownership import owned_classes
@@ -10,7 +11,15 @@ from slarti.models import Models
 from slarti.registry import Constraint, is_unenforced, kind_text
 
 DIAGRAM_PREFIX = "diagram:"
+LINKML_ERD_REGION = "linkml_erd"
 TABLE_REGIONS = ("constraints", "unverified", "ownership")
+
+_BOOL_ERD_OPTIONS = {
+    "follow_references": "follow-references",
+    "exclude_abstract_classes": "exclude-abstract-classes",
+    "exclude_attributes": "exclude-attributes",
+    "structural": "structural",
+}
 
 
 def _row(cells: list[str]) -> str:
@@ -77,16 +86,61 @@ def diagram_block(name: str, diagrams: dict[str, str]) -> str:
     return "```mermaid\n" + diagrams[name] + "\n```"
 
 
+def _parse_erd_opts(region: str) -> list[str]:
+    """Parse gen-erdiagram options from a region name like ``linkml_erd?classes=X,Y``."""
+    _, _, qs = region.partition("?")
+    extra: list[str] = []
+    for key, values in parse_qs(qs, keep_blank_values=True).items():
+        val = values[0] if values else ""
+        extra += _erd_opt(key, val)
+    return extra
+
+
+def _erd_opt(key: str, val: str) -> list[str]:
+    flag = _BOOL_ERD_OPTIONS.get(key)
+    if flag:
+        return [f"--{flag}" if val in ("", "true", "1") else f"--no-{flag}"]
+    if key == "classes":
+        return ["--classes", val]
+    return [f"--{key}", val]
+
+
+def linkml_erd_block(models: Models, extra: list[str] | None = None) -> str:
+    """Generate a Mermaid ER diagram from the LinkML schema via gen-erdiagram.
+
+    ``extra`` is a list of additional CLI arguments forwarded to gen-erdiagram
+    (e.g. ``["--classes", "Task,Report"]``).
+    """
+    files = models.config.schema_files()
+    if not files:
+        return "_No LinkML schema found._"
+    argv = ["gen-erdiagram", "--format", "mermaid", *(extra or []), str(files[0])]
+    result = proc.run(argv, cwd=models.config.root)
+    if result.code != 0:
+        return f"_gen-erdiagram failed:_\n{result.stderr or result.stdout}"
+    return "```mermaid\n" + result.stdout.strip() + "\n```"
+
+
+def _static_body(region: str, constraints: list[Constraint], models: Models) -> str | None:
+    match region:
+        case "constraints":
+            return constraints_table(constraints)
+        case "unverified":
+            return unverified_table(constraints)
+        case "ownership":
+            return ownership_table(models)
+        case _ if region == LINKML_ERD_REGION or region.startswith(LINKML_ERD_REGION + "?"):
+            return linkml_erd_block(models, extra=_parse_erd_opts(region))
+    return None
+
+
 def region_content(
     region: str, constraints: list[Constraint], models: Models, diagrams: dict[str, str]
 ) -> str | None:
     """Generated body for a named region, or None if the name is unknown."""
-    if region == "constraints":
-        return constraints_table(constraints)
-    if region == "unverified":
-        return unverified_table(constraints)
-    if region == "ownership":
-        return ownership_table(models)
+    body = _static_body(region, constraints, models)
+    if body is not None:
+        return body
     if region.startswith(DIAGRAM_PREFIX):
         return diagram_block(region[len(DIAGRAM_PREFIX) :], diagrams)
     return None

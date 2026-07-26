@@ -69,7 +69,8 @@ _PATH_DESCRIPTIONS: dict[str, str] = {
 
 @app.command()
 def init(directory: Path = DIRECTORY_ARGUMENT) -> None:
-    """Scaffold slarti.toml, docs/slarti/, and architecture doc. Never overwrites."""
+    """Scaffold config, docs/slarti/, and an architecture doc with example markers.
+    Never overwrites existing files."""
     result = scaffold.init(directory)
     for name in result.written:
         typer.echo(f"created {name}")
@@ -133,7 +134,23 @@ def docs_command(
 ) -> None:
     """Regenerate architecture documents from model sources. --check exits non-zero if stale.
 
-    Replaceable markers: diagram:<view>, ownership, constraints, unverified."""
+    Documents use HTML-comment markers to delimit generated regions:
+      <!-- slarti:begin <name> -->
+      ...
+      <!-- slarti:end <name> -->
+
+    Replacement is wholesale (idempotent — safe to re-run).
+    Unbalanced markers cause an error; every open must have a matching close.
+
+    Recognised marker names: diagram:<view>, ownership, constraints, unverified,
+    linkml_erd (Entity Relationship diagram from the LinkML schema).
+    ``linkml_erd`` accepts gen-erdiagram options appended with ``?``, e.g.
+    ``<!-- slarti:begin linkml_erd?classes=X,Y&exclude_attributes=true -->``.
+
+    ``slarti init`` scaffolds a doc with all four markers pre-written
+    (``slarti report`` lists every marker and shape). Init never overwrites
+    an existing file, so if architecture.md already exists, copy the marker
+    pair syntax from above or run init in a throwaway directory."""
     ctx = _context()
     if check_only:
         _docs_check(ctx)
