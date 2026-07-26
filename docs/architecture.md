@@ -311,17 +311,17 @@ than a sentence that quietly stops being true.
 
 <!-- slarti:begin constraints -->
 
-| ID | Rule | Layer | Enforced by | Decision |
-| --- | --- | --- | --- | --- |
-| D1 | Every finding carries a stable rule ID and a remedy sentence. | 3 | shacl_shape `slarti:FindingCarriesRemedy` | ADR-0002 |
-| D2 | A constraint with no enforcer must give a reason. | 3 | shacl_shape `slarti:UnenforcedConstraintGivesReason` | ADR-0002 |
-| D3 | An enforcer names the thing that enforces the rule. | 3 | shacl_shape `slarti:EnforcerNamesWhatItIs` | - |
-| D4 | A finding names the file it is about. | 2 | linkml_slot `Finding.file` | - |
-| D5 | The checks never invoke LikeC4 or LinkML themselves; the adapters do. | 1 | likec4_absent_relation `slarti.checks -> likec4` | - |
-| D6 | The CLI never reads model sources directly; it goes through the adapters. | 1 | likec4_absent_relation `slarti.cli -> sources` | - |
-| D7 | The environment gate probes LikeC4 before any command that shells out. | 1 | likec4_relation `slarti.env -> likec4` | - |
-| D8 | Every domain entity is owned by exactly one container. | 1 | ownership `Finding` | ADR-0002 |
-| D9 | The document generator writes only generated regions of the sources. | 1 | likec4_relation `slarti.docsgen -> sources` | - |
+| ID | Rule | Enforced by | Decision |
+| --- | --- | --- | --- |
+| D1 | Every finding carries a stable rule ID and a remedy sentence. | shacl_shape `slarti:FindingCarriesRemedy` | ADR-0002 |
+| D2 | A constraint with no enforcer must give a reason. | shacl_shape `slarti:UnenforcedConstraintGivesReason` | ADR-0002 |
+| D3 | An enforcer names the thing that enforces the rule. | shacl_shape `slarti:EnforcerNamesWhatItIs` | - |
+| D4 | A finding names the file it is about. | linkml_slot `Finding.file` | - |
+| D5 | The checks never invoke LikeC4 or LinkML themselves; the adapters do. | likec4_absent_relation `slarti.checks -> likec4` | - |
+| D6 | The CLI never reads model sources directly; it goes through the adapters. | likec4_absent_relation `slarti.cli -> sources` | - |
+| D7 | The environment gate probes LikeC4 before any command that shells out. | likec4_relation `slarti.env -> likec4` | - |
+| D8 | Every domain entity is owned by exactly one container. | ownership `Finding` | ADR-0002 |
+| D9 | The document generator writes only generated regions of the sources. | likec4_relation `slarti.docsgen -> sources` | - |
 
 <!-- slarti:end constraints -->
 

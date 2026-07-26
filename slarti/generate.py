@@ -40,14 +40,13 @@ def constraints_table(constraints: list[Constraint]) -> str:
         [
             c.id,
             c.statement,
-            str(c.enforced_by.layer or "-"),
             f"{kind_text(c.enforced_by)} {resolvers.describe(c.enforced_by)}",
             c.decision or "-",
         ]
         for c in sorted(constraints, key=lambda c: c.id)
         if not is_unenforced(c.enforced_by)
     ]
-    return _table(["ID", "Rule", "Layer", "Enforced by", "Decision"], rows, "No enforced rules.")
+    return _table(["ID", "Rule", "Enforced by", "Decision"], rows, "No enforced rules.")
 
 
 def unverified_table(constraints: list[Constraint]) -> str:
