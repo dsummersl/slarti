@@ -7,6 +7,7 @@ CONFIG = """# slarti: paths only. Settings belong to the tools that own them.
 [paths]
 likec4 = "docs/slarti/likec4"
 linkml = "docs/slarti/linkml"
+# linkml_index = "slarti.yaml"  # optional; root schema when splitting across files
 shacl = "docs/slarti/shacl"
 constraints = "docs/slarti/constraints.yaml"
 shacl_valid = "docs/slarti/data/valid"

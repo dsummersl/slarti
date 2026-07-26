@@ -11,6 +11,7 @@ PYPROJECT_NAME = "pyproject.toml"
 DEFAULTS: dict[str, str] = {
     "likec4": "docs/slarti/likec4",
     "linkml": "docs/slarti/linkml",
+    "linkml_index": "",
     "shacl": "docs/slarti/shacl",
     "constraints": "docs/slarti/constraints.yaml",
     "shacl_valid": "docs/slarti/data/valid",
@@ -47,6 +48,19 @@ class Config:
 
     def schema_files(self) -> list[Path]:
         return sorted(self.path("linkml").glob("*.yaml"))
+
+    def schema_index(self) -> Path | None:
+        """The root schema file. ``linkml_index`` names one file;
+        when absent, the alphabetically first ``*.yaml`` is the index."""
+        files = self.schema_files()
+        if not files:
+            return None
+        index_name = self.paths.get("linkml_index", "").strip()
+        if index_name:
+            candidate = self.path("linkml") / index_name
+            if candidate in files:
+                return candidate
+        return files[0]
 
     def shape_files(self) -> list[Path]:
         return sorted(self.path("shacl").glob("*.ttl"))

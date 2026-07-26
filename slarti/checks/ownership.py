@@ -6,13 +6,26 @@ from slarti.models import Likec4Model, Models
 OWNER_ANNOTATION = "owner"
 
 
+def _is_owned(cls: object, schema_ids: set[str]) -> bool:
+    abstract = getattr(cls, "abstract", False)
+    mixin = getattr(cls, "mixin", False)
+    from_schema = getattr(cls, "from_schema", "")
+    return bool(not abstract and not mixin and from_schema in schema_ids)
+
+
 def owned_classes(models: Models) -> list[str]:
-    """Concrete schema classes that must declare an owning container."""
+    """Concrete schema classes that must declare an owning container.
+
+    ``imports=True`` lets classes split across multiple files be visible;
+    the ``linkml:types`` namespace and other truly-imported schemas are
+    filtered out via ``from_schema`` against the project's own schema ids.
+    """
     view = models.schema
     if view is None:
         return []
-    classes = view.all_classes(imports=False)
-    return sorted(name for name, cls in classes.items() if not (cls.abstract or cls.mixin))
+    schema_ids = models.schema_id_set
+    return sorted(name for name, cls in view.all_classes(imports=True).items()
+                  if _is_owned(cls, schema_ids))
 
 
 def _missing_owner(name: str, schema_file: str) -> Finding:
@@ -51,10 +64,11 @@ def _unclaimed(name: str, owner: str, schema_file: str) -> Finding:
     )
 
 
-def _class_findings(models: Models, model: Likec4Model, schema_file: str) -> list[Finding]:
+def _class_findings(models: Models, model: Likec4Model) -> list[Finding]:
     findings = []
     for name in owned_classes(models):
         owner = models.class_annotation(name, OWNER_ANNOTATION)
+        schema_file = models.schema_file_for(name)
         if owner is None:
             findings.append(_missing_owner(name, schema_file))
         elif owner not in model.elements:
@@ -113,13 +127,10 @@ def _double_claim_findings(models: Models, model: Likec4Model, arch_dir: str) ->
 
 def check(models: Models) -> list[Finding]:
     """OWN-1..OWN-5: the ownership seam, checked in both directions (I14)."""
-    config = models.config
-    schema_files = config.schema_files()
-    schema_file = config.rel(schema_files[0]) if schema_files else config.paths["linkml"]
-    arch_dir = config.paths["likec4"]
+    arch_dir = models.config.paths["likec4"]
     model = models.likec4
     return [
-        *_class_findings(models, model, schema_file),
+        *_class_findings(models, model),
         *_element_findings(models, model, arch_dir),
         *_double_claim_findings(models, model, arch_dir),
     ]

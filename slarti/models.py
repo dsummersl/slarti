@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
 
+import yaml
 from linkml_runtime import SchemaView
 from rdflib import Graph
 from rdflib.namespace import SH
@@ -127,10 +128,35 @@ class Models:
 
     @cached_property
     def schema(self) -> SchemaView | None:
-        files = self.config.schema_files()
-        if not files:
+        index = self.config.schema_index()
+        if index is None:
             return None
-        return SchemaView(str(files[0]))
+        return SchemaView(str(index))
+
+    @cached_property
+    def _schema_id_map(self) -> dict[str, str]:
+        """Schema id → relative path for every file in the configured LinkML directory."""
+        result: dict[str, str] = {}
+        for path in self.config.schema_files():
+            doc = yaml.safe_load(path.read_text())
+            if isinstance(doc, dict) and "id" in doc:
+                result[doc["id"]] = self.config.rel(path)
+        return result
+
+    @cached_property
+    def schema_id_set(self) -> set[str]:
+        return set(self._schema_id_map)
+
+    def schema_file_for(self, class_name: str) -> str:
+        """Relative path of the project file that declares the given class."""
+        view = self.schema
+        if view is None:
+            return self.config.paths["linkml"]
+        cls = view.get_class(class_name)
+        if cls is not None and cls.from_schema in self._schema_id_map:
+            return self._schema_id_map[cls.from_schema]
+        index = self.config.schema_index()
+        return self.config.rel(index) if index else self.config.paths["linkml"]
 
     @cached_property
     def shapes(self) -> dict[str, Path]:

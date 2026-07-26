@@ -86,6 +86,7 @@ def _context() -> runner.Context:
 _PATH_DESCRIPTIONS: dict[str, str] = {
     "likec4": "LikeC4 architecture model sources (*.c4)",
     "linkml": "LinkML domain entity schemas (*.yaml)",
+    "linkml_index": "Root schema file (optional; falls back to alphabetically-first *.yaml)",
     "shacl": "SHACL shape files (*.ttl)",
     "shacl_valid": "Fixtures that must pass SHACL validation",
     "shacl_invalid": "Fixtures that must violate rules (one per rule)",

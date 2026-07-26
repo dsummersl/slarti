@@ -121,10 +121,10 @@ def linkml_erd_block(models: Models, extra: list[str] | None = None) -> str:
     ``extra`` is a list of additional CLI arguments forwarded to gen-erdiagram
     (e.g. ``["--classes", "Task,Report"]``).
     """
-    files = models.config.schema_files()
-    if not files:
+    index = models.config.schema_index()
+    if index is None:
         return "_No LinkML schema found._"
-    argv = ["gen-erdiagram", "--format", "mermaid", *(extra or []), str(files[0])]
+    argv = ["gen-erdiagram", "--format", "mermaid", *(extra or []), str(index)]
     result = proc.run(argv, cwd=models.config.root)
     if result.code != 0:
         return f"_gen-erdiagram failed:_\n{result.stderr or result.stdout}"
